@@ -11,6 +11,7 @@ import (
 type Remote interface {
 	CallSign(SigningRequest) (SigningResponse, error)
 	CallVerify(VerificationRequest) (VerificationResponse, error)
+	CallKeyAvailable(request KeyAvailabilityRequest) (KeyAvailabilityResponse, error)
 }
 
 type PerunCardanoWallet struct {
@@ -25,14 +26,13 @@ func (r *PerunCardanoWallet) CallSign(body SigningRequest) (SigningResponse, err
 	}
 	jsonResponse, err := r.callEndpoint(jsonBody, signEndpoint)
 	if err != nil {
-		return SigningResponse{}, fmt.Errorf("unable to call endpoint: %w", err)
+		return SigningResponse{}, fmt.Errorf("failed to call endpoint: %w", err)
 	}
 	var result SigningResponse
-	err = json.Unmarshal(jsonResponse, &result)
-	if err != nil {
+	if err = json.Unmarshal(jsonResponse, &result); err != nil {
 		return SigningResponse{}, fmt.Errorf("failed to unmarshal wallet server response for singing: %w", err)
 	}
-	return result, err
+	return result, nil
 }
 
 func (r *PerunCardanoWallet) CallVerify(body VerificationRequest) (VerificationResponse, error) {
@@ -43,14 +43,30 @@ func (r *PerunCardanoWallet) CallVerify(body VerificationRequest) (VerificationR
 	}
 	jsonResponse, err := r.callEndpoint(jsonBody, verifyEndpoint)
 	if err != nil {
-		return false, fmt.Errorf("unable to call endpoint: %w", err)
+		return false, fmt.Errorf("failed to call endpoint: %w", err)
 	}
 	var result VerificationResponse
-	err = json.Unmarshal(jsonResponse, &result)
-	if err != nil {
+	if err = json.Unmarshal(jsonResponse, &result); err != nil {
 		return false, fmt.Errorf("failed to unmarshal wallet server response for verification: %w", err)
 	}
-	return result, err
+	return result, nil
+}
+
+func (r *PerunCardanoWallet) CallKeyAvailable(body KeyAvailabilityRequest) (KeyAvailabilityResponse, error) {
+	const keyAvailableEndpoint = "/keyAvailable"
+	jsonBody, err := json.Marshal(body)
+	if err != nil {
+		return false, fmt.Errorf("unable to marshal json for key availaility request body: %w", err)
+	}
+	jsonResponse, err := r.callEndpoint(jsonBody, keyAvailableEndpoint)
+	if err != nil {
+		return false, fmt.Errorf("failed to call endpoint: %w", err)
+	}
+	var result KeyAvailabilityResponse
+	if err = json.Unmarshal(jsonResponse, &result); err != nil {
+		return false, fmt.Errorf("failed to unmarshal wallet server response for key availability %w", err)
+	}
+	return result, nil
 }
 
 func (r *PerunCardanoWallet) callEndpoint(jsonBody []byte, endpoint string) ([]byte, error) {

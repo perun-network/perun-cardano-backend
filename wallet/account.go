@@ -36,10 +36,10 @@ func (a RemoteAccount) SignData(data []byte) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to decode signature as hex, %w", err)
 	}
-	if len(res) != SignatureSize {
+	if len(res) != SignatureLength {
 		return nil, fmt.Errorf(
 			"signature has incorrect length. expected: %d bytes actual: %d bytes",
-			SignatureSize,
+			SignatureLength,
 			len(res),
 		)
 	}

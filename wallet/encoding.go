@@ -15,5 +15,8 @@ type SignatureWrapper struct {
 	Signature string `json:"getSignature"`
 }
 
-type VerificationResponse = bool
+type KeyAvailabilityRequest = PubKey
+
 type SigningResponse = SignatureWrapper
+type VerificationResponse = bool
+type KeyAvailabilityResponse = bool

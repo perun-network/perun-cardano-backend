@@ -6,7 +6,7 @@ import (
 	"perun.network/go-perun/wallet"
 )
 
-// PubKeyLength is the length of a public key in bytes (not the length of hex string!)
+// PubKeyLength is the length of a Cardano public key in bytes
 const PubKeyLength = 32
 
 // PubKey represents a Cardano public key struct (Ledger.Crypto.PubKey in the plutus-ledger library).

@@ -7,26 +7,31 @@ import (
 	"perun.network/go-perun/wallet"
 )
 
-const SignatureSize = 64
+// SignatureLength is the length of valid Cardano signatures in bytes
+const SignatureLength = 64
 
-type Backend struct {
+type RemoteBackend struct {
 	walletServer Remote
 }
 
-func (b Backend) NewAddress() wallet.Address {
+func MakeRemoteBackend(remote Remote) RemoteBackend {
+	return RemoteBackend{remote}
+}
+
+func (b RemoteBackend) NewAddress() wallet.Address {
 	a := new(PubKey)
 	return a
 }
 
-func (b Backend) DecodeSig(reader io.Reader) (wallet.Sig, error) {
-	sig := make([]byte, SignatureSize)
+func (b RemoteBackend) DecodeSig(reader io.Reader) (wallet.Sig, error) {
+	sig := make([]byte, SignatureLength)
 	if _, err := io.ReadFull(reader, sig); err != nil {
 		return nil, err
 	}
 	return sig, nil
 }
 
-func (b Backend) VerifySignature(msg []byte, sig wallet.Sig, a wallet.Address) (bool, error) {
+func (b RemoteBackend) VerifySignature(msg []byte, sig wallet.Sig, a wallet.Address) (bool, error) {
 	a_, ok := a.(*PubKey)
 	if !ok {
 		return false, fmt.Errorf("invalid Address for signature verification")
@@ -36,10 +41,10 @@ func (b Backend) VerifySignature(msg []byte, sig wallet.Sig, a wallet.Address) (
 		Key:        *a_,
 		Data:       hex.EncodeToString(msg),
 	}
-	if len(sig) != SignatureSize {
+	if len(sig) != SignatureLength {
 		return false, fmt.Errorf(
 			"signature has incorrect length. expected: %d bytes actual: %d bytes",
-			SignatureSize,
+			SignatureLength,
 			len(sig),
 		)
 	}
@@ -51,4 +56,4 @@ func (b Backend) VerifySignature(msg []byte, sig wallet.Sig, a wallet.Address) (
 	return verificationResponse, nil
 }
 
-var _ wallet.Backend = Backend{}
+var _ wallet.Backend = RemoteBackend{}
