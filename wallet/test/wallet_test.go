@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestWallet(t *testing.T) {
+func TestRemoteWallet_Trace(t *testing.T) {
 	seed := SetSeed()
 
 	r := NewMockRemote()

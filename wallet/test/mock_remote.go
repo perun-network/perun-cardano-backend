@@ -1,6 +1,7 @@
 package test
 
 import (
+	"bytes"
 	"encoding/hex"
 	"fmt"
 	"math/rand"
@@ -30,8 +31,8 @@ type MockRemote struct {
 	MockPubKeyBytes []byte
 	// UnavailablePubKey is a valid wallet.PubKey that has associated account (private key) in this remote wallet
 	UnavailablePubKey wallet.PubKey
-	// InvalidPubKeyBytes this is a byte array that is no valid public key
-	// (essentially because it is not exactly wallet.PubKeyLength) bytes long
+	// InvalidPubKey is invalid because it is not exactly wallet.PubKeyLength bytes long
+	InvalidPubKey      wallet.PubKey
 	InvalidPubKeyBytes []byte
 
 	MockSignature       []byte
@@ -39,6 +40,11 @@ type MockRemote struct {
 	// OtherSignature is a correctly encoded signature that is not valid for any (message, public key) pair
 	OtherSignature       []byte
 	OtherSignatureString string
+
+	// InvalidSignatureLonger is a signature that has a length longer than wallet.SignatureLength
+	InvalidSignatureLonger []byte
+	// InvalidSignatureShorter is a signature that has a length shorter than wallet.SignatureLength
+	InvalidSignatureShorter []byte
 
 	MockMessage       []byte
 	MockMessageString string
@@ -61,29 +67,41 @@ func NewMockRemote() *MockRemote {
 func initializeRandomValues(r *MockRemote) {
 	const maxMessageLength = 2 ^ 8 // in bytes
 	const maxInvalidPubKeyLength = wallet.PubKeyLength * 2
+	const maxInvalidSignatureLength = wallet.SignatureLength * 2
 
 	r.MockPubKeyBytes = make([]byte, wallet.PubKeyLength)
 	rand.Read(r.MockPubKeyBytes)
 	r.MockPubKey = wallet.PubKey{KeyString: hex.EncodeToString(r.MockPubKeyBytes)}
 
 	unavailablePubKeyBytes := make([]byte, wallet.PubKeyLength)
-	rand.Read(unavailablePubKeyBytes)
+	for bytes.Equal(r.MockPubKeyBytes, unavailablePubKeyBytes) {
+		rand.Read(unavailablePubKeyBytes)
+	}
 	r.UnavailablePubKey = wallet.PubKey{KeyString: hex.EncodeToString(unavailablePubKeyBytes)}
 
 	if rand.Int()%2 == 0 {
 		r.InvalidPubKeyBytes = make([]byte, rand.Intn(wallet.PubKeyLength))
 	} else {
-		r.InvalidPubKeyBytes = make([]byte, rand.Intn(maxInvalidPubKeyLength-wallet.PubKeyLength), wallet.PubKeyLength+1)
+		r.InvalidPubKeyBytes = make([]byte, rand.Intn(maxInvalidPubKeyLength-wallet.PubKeyLength)+wallet.PubKeyLength+1)
 	}
 	rand.Read(r.InvalidPubKeyBytes)
+	r.InvalidPubKey = wallet.PubKey{KeyString: hex.EncodeToString(r.InvalidPubKeyBytes)}
 
 	r.MockSignature = make([]byte, wallet.SignatureLength)
 	rand.Read(r.MockSignature)
 	r.MockSignatureString = hex.EncodeToString(r.MockSignature)
 
 	r.OtherSignature = make([]byte, wallet.SignatureLength)
-	rand.Read(r.OtherSignature)
+	for bytes.Equal(r.MockSignature, r.OtherSignature) {
+		rand.Read(r.OtherSignature)
+	}
 	r.OtherSignatureString = hex.EncodeToString(r.OtherSignature)
+
+	r.InvalidSignatureShorter = make([]byte, rand.Intn(wallet.SignatureLength))
+	rand.Read(r.InvalidSignatureShorter)
+
+	r.InvalidSignatureLonger = make([]byte, rand.Intn(maxInvalidSignatureLength-wallet.SignatureLength)+wallet.SignatureLength+1)
+	rand.Read(r.InvalidSignatureLonger)
 
 	r.MockMessage = make([]byte, rand.Intn(maxMessageLength+1))
 	rand.Read(r.MockMessage)
@@ -119,12 +137,15 @@ func makeCallVerifyDefault(r *MockRemote) func(wallet.VerificationRequest) (wall
 		if request.Data != r.MockMessageString {
 			return false, fmt.Errorf("invalid data for mock remote")
 		}
-
 		if request.SigWrapper.Signature == r.MockSignatureString {
 			return true, nil
 		}
 		if request.SigWrapper.Signature == r.OtherSignatureString {
 			return false, nil
+		}
+		if request.SigWrapper.Signature == hex.EncodeToString(r.InvalidSignatureShorter) ||
+			request.SigWrapper.Signature == hex.EncodeToString(r.InvalidSignatureLonger) {
+			panic("mock remote received signature of invalid length to verify")
 		}
 		return false, fmt.Errorf("invalid signature for mock remote")
 	}

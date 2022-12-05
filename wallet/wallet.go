@@ -11,6 +11,7 @@ type RemoteWallet struct {
 	walletServer Remote
 }
 
+// NewRemoteWallet returns a pointer to a new RemoteWallet struct, setting the wallet server to the given Remote
 func NewRemoteWallet(remote Remote) *RemoteWallet {
 	return &RemoteWallet{walletServer: remote}
 }
@@ -41,5 +42,5 @@ func (w *RemoteWallet) Unlock(address wallet.Address) (wallet.Account, error) {
 	if !available {
 		return nil, fmt.Errorf("wallet server has no private key for public key %s", pubKey.KeyString)
 	}
-	return RemoteAccount{*pubKey, w.walletServer}, nil
+	return MakeRemoteAccount(*pubKey, w.walletServer), nil
 }

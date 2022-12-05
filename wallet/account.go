@@ -12,6 +12,14 @@ type RemoteAccount struct {
 	walletServer Remote
 }
 
+// MakeRemoteAccount returns a new RemoteAccount instance, setting all the fields
+func MakeRemoteAccount(addr PubKey, r Remote) RemoteAccount {
+	return RemoteAccount{
+		Addr:         addr,
+		walletServer: r,
+	}
+}
+
 // Address returns the PubKey associated with this account
 func (a RemoteAccount) Address() wallet.Address {
 	return &a.Addr
