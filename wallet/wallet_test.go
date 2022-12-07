@@ -46,7 +46,7 @@ func TestRemoteWallet_Trace(t *testing.T) {
 		t,
 		&r.MockPubKey,
 		account.Address(),
-		"address has account has unexpected pubic key",
+		"account has address with unexpected public key",
 	)
 	signature, err := account.SignData(r.MockMessage)
 	require.NoError(t, err, "unable to sign message")
