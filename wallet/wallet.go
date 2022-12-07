@@ -11,24 +11,24 @@ type RemoteWallet struct {
 	walletServer Remote
 }
 
-// NewRemoteWallet returns a pointer to a new RemoteWallet struct, setting the wallet server to the given Remote
+// NewRemoteWallet returns a pointer to a new RemoteWallet struct, setting the wallet server to the given Remote.
 func NewRemoteWallet(remote Remote) *RemoteWallet {
 	return &RemoteWallet{walletServer: remote}
 }
 
-// LockAll is unimplemented due to the remote nature of this wallet
+// LockAll is unimplemented due to the remote nature of this wallet.
 func (w *RemoteWallet) LockAll() {
 }
 
-// IncrementUsage is unimplemented due to the remote nature of this wallet
+// IncrementUsage is unimplemented due to the remote nature of this wallet.
 func (w *RemoteWallet) IncrementUsage(address wallet.Address) {
 }
 
-// DecrementUsage is unimplemented due to the remote nature of this wallet
+// DecrementUsage is unimplemented due to the remote nature of this wallet.
 func (w *RemoteWallet) DecrementUsage(address wallet.Address) {
 }
 
-// Unlock verifies that the remote wallet server has the private key for this address before returning an Account
+// Unlock verifies that the remote wallet server has the private key for this address before returning an Account.
 func (w *RemoteWallet) Unlock(address wallet.Address) (wallet.Account, error) {
 	pubKey, ok := address.(*PubKey)
 	if !ok {
@@ -40,7 +40,7 @@ func (w *RemoteWallet) Unlock(address wallet.Address) (wallet.Account, error) {
 		return nil, fmt.Errorf("wallet server could not assert key availability: %w", err)
 	}
 	if !available {
-		return nil, fmt.Errorf("wallet server has no private key for public key %s", pubKey.KeyString)
+		return nil, fmt.Errorf("wallet server has no private key for public key %s", pubKey.Key)
 	}
 	return MakeRemoteAccount(*pubKey, w.walletServer), nil
 }

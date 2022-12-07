@@ -6,18 +6,24 @@ import (
 	"perun.network/go-perun/wallet"
 )
 
-// PubKeyLength is the length of a Cardano public key in bytes
+// PubKeyLength is the length of the public verification key part of a Cardano `ed25519` keypair in bytes.
 const PubKeyLength = 32
 
-// PubKey represents a Cardano public key struct (Ledger.Crypto.PubKey in the plutus-ledger library).
-// The KeyString is a hex string (without "0x") representing the bytes of the public key
+// TODO: the PubKey implementation of wallet.Address only represents the public verification key.
+// 	Cardano addresses also carry staking information though and look something like this:
+//  `addr1vpu5vlrf4xkxv2qpwngf6cjhtw542ayty80v8dyr49rf5eg0yu80w`.
+//  We should move to the latter address representation at some point.
+
+// PubKey represents the public verification key part of a Cardano `ed25519` keypair
+// (Ledger.Crypto.PubKey in the plutus-ledger library). The Key is a hex string (without "0x") representing the bytes of
+// the public key.
 type PubKey struct {
-	KeyString string `json:"getPubKey"`
+	Key string `json:"getPubKey"`
 }
 
-// MarshalBinary decodes the hexadecimal key string and returns the represented bytes after verifying the PubKeyLength
+// MarshalBinary decodes the hexadecimal Key into byte representation. The returned byte slice has length PubKeyLength.
 func (a PubKey) MarshalBinary() ([]byte, error) {
-	key, err := hex.DecodeString(a.KeyString)
+	key, err := hex.DecodeString(a.Key)
 	if err != nil {
 		return nil, fmt.Errorf("pubkey string is not a hex string: %w", err)
 	}
@@ -31,29 +37,29 @@ func (a PubKey) MarshalBinary() ([]byte, error) {
 	return key, nil
 }
 
-// UnmarshalBinary verifies the PubKeyLength and then sets KeyString to the hexadecimal encoding of the bytes
+// UnmarshalBinary expects a byte slice of length PubKeyLength and decodes it into the PubKey receiver.
 func (a *PubKey) UnmarshalBinary(data []byte) error {
 	if len(data) != PubKeyLength {
 		return fmt.Errorf("public key has incorrect length. expected: %d bytes actual: %d bytes",
 			PubKeyLength,
 			len(data))
 	}
-	a.KeyString = hex.EncodeToString(data)
+	a.Key = hex.EncodeToString(data)
 	return nil
 }
 
-// String returns the KeyString
+// String returns the key string
 func (a PubKey) String() string {
-	return a.KeyString
+	return a.Key
 }
 
-// Equal tests two public keys for equality by comparing their KeyString values
+// Equal returns true, iff the given address is of type PubKey and their Key values are equal.
 func (a PubKey) Equal(b wallet.Address) bool {
 	b_, ok := b.(*PubKey)
 	if !ok {
 		return false
 	}
-	return a.KeyString == b_.KeyString
+	return a.Key == b_.Key
 }
 
 var _ wallet.Address = (*PubKey)(nil)

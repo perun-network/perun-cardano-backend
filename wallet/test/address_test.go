@@ -119,7 +119,7 @@ func TestPubKey_String(t *testing.T) {
 	r := NewMockRemote()
 	require.Equalf(
 		t,
-		r.MockPubKey.KeyString,
+		r.MockPubKey.Key,
 		r.MockPubKey.String(),
 		"wrong string representation for public key, test-seed: %d",
 		seed,
@@ -130,7 +130,7 @@ func TestPubKey_Equal(t *testing.T) {
 	seed := SetSeed()
 	r := NewMockRemote()
 	a := &r.MockPubKey
-	b := &wallet.PubKey{KeyString: hex.EncodeToString(r.MockPubKeyBytes)}
+	b := &wallet.PubKey{Key: hex.EncodeToString(r.MockPubKeyBytes)}
 	require.Truef(t, a.Equal(b), "public keys that have the same key string should be equal, test-seed: %d", seed)
 	require.Truef(t, b.Equal(a), "public key equality should be commutative, test-seed: %d", seed)
 	require.Falsef(

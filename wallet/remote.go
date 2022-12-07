@@ -8,18 +8,18 @@ import (
 	"net/http"
 )
 
-// Remote is an interface, which instances are used to communicate with the perun-cardano-wallet server
+// Remote is an interface, which instances are used to communicate with the perun-cardano-wallet server.
 type Remote interface {
-	// CallSign is the endpoint for signing data with the perun-cardano-wallet
+	// CallSign is the endpoint for signing data with the perun-cardano-wallet.
 	CallSign(SigningRequest) (SigningResponse, error)
-	// CallVerify is the endpoint for verifying signatures with the perun-cardano-wallet
+	// CallVerify is the endpoint for verifying signatures with the perun-cardano-wallet.
 	CallVerify(VerificationRequest) (VerificationResponse, error)
 	// CallKeyAvailable is the endpoint for verifying that the connected perun-cardano-wallet has the private key to
-	// a given PubKey
+	// a given PubKey.
 	CallKeyAvailable(request KeyAvailabilityRequest) (KeyAvailabilityResponse, error)
 }
 
-// PerunCardanoWallet is a basic implementation that calls the perun-cardano-wallet's api via http
+// PerunCardanoWallet is a basic implementation Remote implementation that calls perun-cardano-wallet via http.
 type PerunCardanoWallet struct {
 	serverAddress string
 }
@@ -28,8 +28,7 @@ func NewPerunCardanoWallet(addr string) *PerunCardanoWallet {
 	return &PerunCardanoWallet{serverAddress: addr}
 }
 
-// CallSign sends a POST request with the marshalled SigningRequest as body to the `/sign` endpoint of the
-// perun-cardano-wallet server. The response is unmarshalled and returned as SigningResponse
+// CallSign computes a Signature for the given SigningRequest via the perun-cardano-wallet server.
 func (r *PerunCardanoWallet) CallSign(body SigningRequest) (SigningResponse, error) {
 	const signEndpoint = "/sign"
 	jsonBody, err := json.Marshal(body)
@@ -47,8 +46,8 @@ func (r *PerunCardanoWallet) CallSign(body SigningRequest) (SigningResponse, err
 	return result, nil
 }
 
-// CallVerify sends a POST request with the marshalled VerificationRequest as body to the `/verify` endpoint of the
-// perun-cardano-wallet server. The response is unmarshalled and returned as VerificationResponse
+// CallVerify verifies the (message, signature, public key) tuple in the given VerificationRequest via the
+// perun-cardano-wallet server.
 func (r *PerunCardanoWallet) CallVerify(body VerificationRequest) (VerificationResponse, error) {
 	const verifyEndpoint = "/verify"
 	jsonBody, err := json.Marshal(body)
@@ -66,8 +65,8 @@ func (r *PerunCardanoWallet) CallVerify(body VerificationRequest) (VerificationR
 	return result, nil
 }
 
-// CallKeyAvailable sends a POST request with the marshalled KeyAvailabilityRequest as body to the `/keyAvailable`
-// endpoint of the perun-cardano-wallet server. The response is unmarshalled and returned as KeyAvailabilityResponse
+// CallKeyAvailable queries whether the connected perun-cardano-wallet server has the private key for the public key
+// given in the KeyAvailabilityRequest.
 func (r *PerunCardanoWallet) CallKeyAvailable(body KeyAvailabilityRequest) (KeyAvailabilityResponse, error) {
 	const keyAvailableEndpoint = "/keyAvailable"
 	jsonBody, err := json.Marshal(body)
@@ -85,7 +84,7 @@ func (r *PerunCardanoWallet) CallKeyAvailable(body KeyAvailabilityRequest) (KeyA
 	return result, nil
 }
 
-// callEndpoint sends a POST request to the given endpoint with the given request body and returns the response body
+// callEndpoint issues a request to the given endpoint with the given body.
 func (r *PerunCardanoWallet) callEndpoint(jsonBody []byte, endpoint string) ([]byte, error) {
 	request, err := http.NewRequest("POST", r.serverAddress+endpoint, bytes.NewBuffer(jsonBody))
 	if err != nil {

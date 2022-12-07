@@ -1,57 +1,44 @@
 package wallet
 
 import (
-	"encoding/hex"
 	"fmt"
 	"perun.network/go-perun/wallet"
 )
 
-// RemoteAccount represents a cardano account. The secrets are stored on the associated remote walletServer
+// RemoteAccount represents a cardano account. The secrets are stored on the associated remote walletServer.
 type RemoteAccount struct {
-	Addr         PubKey
-	walletServer Remote
+	AccountPubKey PubKey
+	walletServer  Remote
 }
 
-// MakeRemoteAccount returns a new RemoteAccount instance, setting all the fields
-func MakeRemoteAccount(addr PubKey, r Remote) RemoteAccount {
+// MakeRemoteAccount returns a new RemoteAccount instance.
+func MakeRemoteAccount(pubKey PubKey, r Remote) RemoteAccount {
 	return RemoteAccount{
-		Addr:         addr,
-		walletServer: r,
+		AccountPubKey: pubKey,
+		walletServer:  r,
 	}
 }
 
-// Address returns the PubKey associated with this account
+// Address returns the PubKey associated with this account.
 func (a RemoteAccount) Address() wallet.Address {
-	return &a.Addr
+	return &a.AccountPubKey
 }
 
-// SignData signs arbitrary data through the remote wallet server communicating with the local client using
-// SigningRequest and SigningResponse
-func (a RemoteAccount) SignData(data []byte) ([]byte, error) {
-	// prepare SigningRequest for wallet server
-	request := SigningRequest{
-		Key:  a.Addr,
-		Data: hex.EncodeToString(data),
-	}
+// SignData signs arbitrary data with this account.
+func (a RemoteAccount) SignData(data []byte) (wallet.Sig, error) {
+	request := MakeSigningRequest(a.AccountPubKey, data)
 
 	signatureResponse, err := a.walletServer.CallSign(request)
 	if err != nil {
 		return nil, fmt.Errorf("wallet server could not sign message: %w", err)
 	}
 
-	// extract and decode signature from SigningResponse
-	res, err := hex.DecodeString(signatureResponse.Signature)
+	// Extract and decode the signature from SigningResponse.
+	sig, err := signatureResponse.Decode()
 	if err != nil {
-		return nil, fmt.Errorf("unable to decode signature as hex, %w", err)
+		return nil, fmt.Errorf("unable to decode signature from SignatureResponse: %w", err)
 	}
-	if len(res) != SignatureLength {
-		return nil, fmt.Errorf(
-			"signature has incorrect length. expected: %d bytes actual: %d bytes",
-			SignatureLength,
-			len(res),
-		)
-	}
-	return res, nil
+	return sig, nil
 }
 
 var _ wallet.Account = RemoteAccount{}
