@@ -1,15 +1,16 @@
-package test
+package wallet_test
 
 import (
 	"github.com/stretchr/testify/require"
 	"perun.network/perun-cardano-backend/wallet"
+	"perun.network/perun-cardano-backend/wallet/test"
 	"testing"
 )
 
 func TestRemoteWallet_Trace(t *testing.T) {
-	seed := SetSeed()
+	seed := test.SetSeed()
 
-	r := NewMockRemote()
+	r := test.NewMockRemote()
 	backend := wallet.MakeRemoteBackend(r)
 	address := backend.NewAddress()
 	err := address.UnmarshalBinary(r.MockPubKeyBytes)
@@ -64,8 +65,8 @@ func TestRemoteWallet_Trace(t *testing.T) {
 }
 
 func TestRemoteWallet_Unlock(t *testing.T) {
-	seed := SetSeed()
-	r := NewMockRemote()
+	seed := test.SetSeed()
+	r := test.NewMockRemote()
 	w := wallet.NewRemoteWallet(r)
 	account, err := w.Unlock(&r.MockPubKey)
 	require.NoErrorf(t, err, "unable to unlock available address, test-seed: %d", seed)

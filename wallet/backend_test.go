@@ -1,4 +1,4 @@
-package test
+package wallet_test
 
 import (
 	"bytes"
@@ -7,12 +7,13 @@ import (
 	"io"
 	"math/rand"
 	"perun.network/perun-cardano-backend/wallet"
+	"perun.network/perun-cardano-backend/wallet/test"
 	"testing"
 )
 
 func TestBackend_NewAddress(t *testing.T) {
-	seed := SetSeed()
-	r := NewMockRemote()
+	seed := test.SetSeed()
+	r := test.NewMockRemote()
 	uut := wallet.MakeRemoteBackend(r)
 	actualAddress := uut.NewAddress()
 	_, ok := actualAddress.(*wallet.Address)
@@ -20,8 +21,8 @@ func TestBackend_NewAddress(t *testing.T) {
 }
 
 func TestBackend_DecodeSig(t *testing.T) {
-	seed := SetSeed()
-	r := NewMockRemote()
+	seed := test.SetSeed()
+	r := test.NewMockRemote()
 	uut := wallet.MakeRemoteBackend(r)
 
 	readerExact := bytes.NewReader(r.MockSignature)
@@ -65,8 +66,8 @@ func TestBackend_DecodeSig(t *testing.T) {
 }
 
 func TestBackend_VerifySignature(t *testing.T) {
-	seed := SetSeed()
-	r := NewMockRemote()
+	seed := test.SetSeed()
+	r := test.NewMockRemote()
 	uut := wallet.MakeRemoteBackend(r)
 	valid, err := uut.VerifySignature(r.MockMessage, r.MockSignature, &r.MockPubKey)
 	require.NoErrorf(t, err, "received error when verifying a valid signature, test-seed: %d", seed)
