@@ -54,12 +54,12 @@ func (a PubKey) String() string {
 }
 
 // Equal returns true, iff the given address is of type PubKey and their Key values are equal.
-func (a PubKey) Equal(b wallet.Address) bool {
-	b_, ok := b.(*PubKey)
+func (a PubKey) Equal(other wallet.Address) bool {
+	otherPubKey, ok := other.(*PubKey)
 	if !ok {
 		return false
 	}
-	return a.Key == b_.Key
+	return a.Key == otherPubKey.Key
 }
 
 var _ wallet.Address = (*PubKey)(nil)
