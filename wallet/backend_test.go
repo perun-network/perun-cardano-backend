@@ -22,6 +22,9 @@ func TestBackend_NewAddress(t *testing.T) {
 
 func TestBackend_DecodeSig(t *testing.T) {
 	seed := test.SetSeed()
+
+	const maxRandomBytesLength = 128
+
 	r := test.NewMockRemote()
 	uut := wallet.MakeRemoteBackend(r)
 
@@ -30,7 +33,7 @@ func TestBackend_DecodeSig(t *testing.T) {
 	require.NoErrorf(t, err, "received an error when decoding signature, test-seed: %d", seed)
 	require.Equalf(t, r.MockSignature, actualSig, "decoded signature is incorrect, test-seed: %d", seed)
 
-	randomBytes := make([]byte, rand.Intn(129))
+	randomBytes := make([]byte, rand.Intn(maxRandomBytesLength+1))
 	rand.Read(randomBytes)
 	readerLonger := bytes.NewReader(append(r.MockSignature, randomBytes...))
 	actualSig, err = uut.DecodeSig(readerLonger)
