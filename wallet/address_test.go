@@ -3,58 +3,10 @@ package wallet_test
 import (
 	"encoding/hex"
 	"github.com/stretchr/testify/require"
-	pw "perun.network/go-perun/wallet"
 	"perun.network/perun-cardano-backend/wallet"
 	"perun.network/perun-cardano-backend/wallet/test"
 	"testing"
 )
-
-type NotPubKeyAddress struct {
-	T    *testing.T
-	Seed int64
-}
-
-func (n *NotPubKeyAddress) MarshalBinary() (data []byte, err error) {
-	require.Failf(
-		n.T,
-		"failure",
-		"MarshalBinary() should not be called on a NotPubKeyAddress, test-seed: %d",
-		n.Seed,
-	)
-	return nil, nil
-}
-
-func (n *NotPubKeyAddress) UnmarshalBinary(data []byte) error {
-	require.Failf(
-		n.T,
-		"failure",
-		"UnmarshalBinary() should not be called on a NotPubKeyAddress, test-seed: %d",
-		n.Seed,
-	)
-	return nil
-}
-
-func (n *NotPubKeyAddress) String() string {
-	require.Failf(
-		n.T,
-		"failure",
-		"String() should not be called on a NotPubKeyAddress, test-seed: %d",
-		n.Seed,
-	)
-	return ""
-}
-
-func (n *NotPubKeyAddress) Equal(address pw.Address) bool {
-	require.Failf(
-		n.T,
-		"failure",
-		"Equal() should not be called on a NotPubKeyAddress, test-seed: %d",
-		n.Seed,
-	)
-	return false
-}
-
-var _ pw.Address = &NotPubKeyAddress{}
 
 func TestPubKey_MarshalBinary_ValidPubKey(t *testing.T) {
 	seed := test.SetSeed()
@@ -146,10 +98,7 @@ func TestPubKey_Equal(t *testing.T) {
 		"public key equality should be commutative, test-seed: %d",
 		seed,
 	)
-	c := &NotPubKeyAddress{
-		T:    t,
-		Seed: seed,
-	}
+	c := test.NewOtherAddressImpl(t, seed)
 	require.Falsef(
 		t,
 		a.Equal(c),
