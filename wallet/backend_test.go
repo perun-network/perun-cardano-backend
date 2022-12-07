@@ -8,52 +8,50 @@ import (
 	"math/rand"
 	"perun.network/perun-cardano-backend/wallet"
 	"perun.network/perun-cardano-backend/wallet/test"
+	pkgtest "polycry.pt/poly-go/test"
 	"testing"
 )
 
 func TestBackend_NewAddress(t *testing.T) {
-	seed := test.SetSeed()
-	r := test.NewMockRemote()
+	rng := pkgtest.Prng(t)
+	r := test.NewMockRemote(rng)
 	uut := wallet.MakeRemoteBackend(r)
 	actualAddress := uut.NewAddress()
 	_, ok := actualAddress.(*wallet.Address)
-	require.Truef(t, ok, "NewAddress() does not return a Address, test-seed: %d", seed)
+	require.True(t, ok, "NewAddress() does not return a Address")
 }
 
 func TestBackend_DecodeSig(t *testing.T) {
-	seed := test.SetSeed()
-
 	const maxRandomBytesLength = 128
 
-	r := test.NewMockRemote()
+	rng := pkgtest.Prng(t)
+	r := test.NewMockRemote(rng)
 	uut := wallet.MakeRemoteBackend(r)
 
 	readerExact := bytes.NewReader(r.MockSignature)
 	actualSig, err := uut.DecodeSig(readerExact)
-	require.NoErrorf(t, err, "received an error when decoding signature, test-seed: %d", seed)
-	require.Equalf(t, r.MockSignature, actualSig, "decoded signature is incorrect, test-seed: %d", seed)
+	require.NoError(t, err, "received an error when decoding signature")
+	require.Equal(t, r.MockSignature, actualSig, "decoded signature is incorrect")
 
 	randomBytes := make([]byte, rand.Intn(maxRandomBytesLength+1))
 	rand.Read(randomBytes)
 	readerLonger := bytes.NewReader(append(r.MockSignature, randomBytes...))
 	actualSig, err = uut.DecodeSig(readerLonger)
-	require.NoErrorf(t, err, "received an error when decoding signature, test-seed: %d", seed)
-	require.Equalf(t, r.MockSignature, actualSig, "decoded signature is incorrect, test-seed: %d", seed)
+	require.NoError(t, err, "received an error when decoding signature")
+	require.Equal(t, r.MockSignature, actualSig, "decoded signature is incorrect")
 	rest, err := io.ReadAll(readerLonger)
 	require.NoErrorf(
 		t,
 		err,
-		"only one signature (%d bytes) should be read from given reader, test-seed: %d",
+		"only one signature (%d bytes) should be read from given reader",
 		wallet.SignatureLength,
-		seed,
 	)
 	require.Equalf(
 		t,
 		randomBytes,
 		rest,
-		"only one signature (%d bytes) should be read from given reader. No more should be read from the reader, test-seed: %d",
+		"only one signature (%d bytes) should be read from given reader. No more should be read from the reader",
 		wallet.SignatureLength,
-		seed,
 	)
 
 	invalidReader := bytes.NewReader(r.InvalidSignatureShorter)
@@ -62,39 +60,36 @@ func TestBackend_DecodeSig(t *testing.T) {
 	require.Errorf(
 		t,
 		err,
-		"did not error when decoding a shorter signature of length: %d, test-seed: %d",
+		"did not error when decoding a shorter signature of length: %d",
 		len(r.InvalidSignatureShorter),
-		seed,
 	)
 }
 
 func TestBackend_VerifySignature(t *testing.T) {
-	seed := test.SetSeed()
-	r := test.NewMockRemote()
+	rng := pkgtest.Prng(t)
+	r := test.NewMockRemote(rng)
 	uut := wallet.MakeRemoteBackend(r)
 	valid, err := uut.VerifySignature(r.MockMessage, r.MockSignature, &r.MockPubKey)
-	require.NoErrorf(t, err, "received error when verifying a valid signature, test-seed: %d", seed)
-	require.Truef(t, valid, "did not verify a valid signature as valid, test-seed: %d", seed)
+	require.NoError(t, err, "received error when verifying a valid signature")
+	require.True(t, valid, "did not verify a valid signature as valid")
 
 	valid, err = uut.VerifySignature(r.MockMessage, r.OtherSignature, &r.MockPubKey)
-	require.NoErrorf(t, err, "received an error when verifying an invalid signature, test-seed: %d", seed)
-	require.Falsef(t, valid, "verified an invalid signature as valid, test-seed: %d", seed)
+	require.NoError(t, err, "received an error when verifying an invalid signature")
+	require.False(t, valid, "verified an invalid signature as valid")
 
 	_, err = uut.VerifySignature(r.MockMessage, r.InvalidSignatureShorter, &r.MockPubKey)
-	require.Error(
+	require.Errorf(
 		t,
 		err,
-		"failed to error when verifying signature of invalid length: %d, test-seed: %d",
+		"failed to error when verifying signature of invalid length: %d",
 		len(r.InvalidSignatureShorter),
-		seed,
 	)
 
 	_, err = uut.VerifySignature(r.MockMessage, r.InvalidSignatureLonger, &r.MockPubKey)
-	require.Error(
+	require.Errorf(
 		t,
 		err,
-		"failed to error when verifying signature of invalid length: %d, test-seed: %d",
+		"failed to error when verifying signature of invalid length: %d",
 		len(r.InvalidSignatureLonger),
-		seed,
 	)
 }

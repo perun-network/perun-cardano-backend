@@ -6,22 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 	"perun.network/perun-cardano-backend/wallet"
-	"time"
 )
-
-var testSeed *int64
-
-func SetSeed() int64 {
-	if testSeed == nil {
-		testSeed = new(int64)
-		*testSeed = time.Now().UnixNano()
-		rand.Seed(*testSeed)
-		return *testSeed
-	}
-	*testSeed += 1
-	rand.Seed(*testSeed)
-	return *testSeed
-}
 
 // MockRemote should only be instantiated using NewMockRemote.
 // The default implementation has one valid signature tuple:
@@ -54,9 +39,9 @@ type MockRemote struct {
 	callKeyAvailable func(wallet.KeyAvailabilityRequest) (wallet.KeyAvailabilityResponse, error)
 }
 
-func NewMockRemote() *MockRemote {
+func NewMockRemote(rng *rand.Rand) *MockRemote {
 	r := &MockRemote{}
-	initializeRandomValues(r)
+	initializeRandomValues(r, rng)
 
 	r.callSign = makeCallSignDefault(r)
 	r.callVerify = makeCallVerifyDefault(r)
@@ -64,47 +49,47 @@ func NewMockRemote() *MockRemote {
 	return r
 }
 
-func initializeRandomValues(r *MockRemote) {
+func initializeRandomValues(r *MockRemote, rng *rand.Rand) {
 	const maxMessageLength = 2 ^ 8 // in bytes
 	const maxInvalidPubKeyLength = wallet.PubKeyLength * 2
 	const maxInvalidSignatureLength = wallet.SignatureLength * 2
 
 	r.MockPubKeyBytes = make([]byte, wallet.PubKeyLength)
-	rand.Read(r.MockPubKeyBytes)
+	rng.Read(r.MockPubKeyBytes)
 	r.MockPubKey = wallet.Address{PubKey: hex.EncodeToString(r.MockPubKeyBytes)}
 
 	unavailablePubKeyBytes := make([]byte, wallet.PubKeyLength)
 	for bytes.Equal(r.MockPubKeyBytes, unavailablePubKeyBytes) {
-		rand.Read(unavailablePubKeyBytes)
+		rng.Read(unavailablePubKeyBytes)
 	}
 	r.UnavailablePubKey = wallet.Address{PubKey: hex.EncodeToString(unavailablePubKeyBytes)}
 
-	if rand.Int()%2 == 0 {
-		r.InvalidPubKeyBytes = make([]byte, rand.Intn(wallet.PubKeyLength))
+	if rng.Int()%2 == 0 {
+		r.InvalidPubKeyBytes = make([]byte, rng.Intn(wallet.PubKeyLength))
 	} else {
-		r.InvalidPubKeyBytes = make([]byte, rand.Intn(maxInvalidPubKeyLength-wallet.PubKeyLength)+wallet.PubKeyLength+1)
+		r.InvalidPubKeyBytes = make([]byte, rng.Intn(maxInvalidPubKeyLength-wallet.PubKeyLength)+wallet.PubKeyLength+1)
 	}
-	rand.Read(r.InvalidPubKeyBytes)
+	rng.Read(r.InvalidPubKeyBytes)
 	r.InvalidPubKey = wallet.Address{PubKey: hex.EncodeToString(r.InvalidPubKeyBytes)}
 
 	r.MockSignature = make([]byte, wallet.SignatureLength)
-	rand.Read(r.MockSignature)
+	rng.Read(r.MockSignature)
 	r.MockSignatureString = hex.EncodeToString(r.MockSignature)
 
 	r.OtherSignature = make([]byte, wallet.SignatureLength)
 	for bytes.Equal(r.MockSignature, r.OtherSignature) {
-		rand.Read(r.OtherSignature)
+		rng.Read(r.OtherSignature)
 	}
 	r.OtherSignatureString = hex.EncodeToString(r.OtherSignature)
 
-	r.InvalidSignatureShorter = make([]byte, rand.Intn(wallet.SignatureLength))
-	rand.Read(r.InvalidSignatureShorter)
+	r.InvalidSignatureShorter = make([]byte, rng.Intn(wallet.SignatureLength))
+	rng.Read(r.InvalidSignatureShorter)
 
-	r.InvalidSignatureLonger = make([]byte, rand.Intn(maxInvalidSignatureLength-wallet.SignatureLength)+wallet.SignatureLength+1)
-	rand.Read(r.InvalidSignatureLonger)
+	r.InvalidSignatureLonger = make([]byte, rng.Intn(maxInvalidSignatureLength-wallet.SignatureLength)+wallet.SignatureLength+1)
+	rng.Read(r.InvalidSignatureLonger)
 
-	r.MockMessage = make([]byte, rand.Intn(maxMessageLength+1))
-	rand.Read(r.MockMessage)
+	r.MockMessage = make([]byte, rng.Intn(maxMessageLength+1))
+	rng.Read(r.MockMessage)
 	r.MockMessageString = hex.EncodeToString(r.MockMessage)
 }
 

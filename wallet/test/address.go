@@ -7,53 +7,47 @@ import (
 )
 
 type OtherAddressImpl struct {
-	t    *testing.T
-	seed int64
+	t *testing.T
 }
 
-func NewOtherAddressImpl(t *testing.T, seed int64) *OtherAddressImpl {
+func NewOtherAddressImpl(t *testing.T) *OtherAddressImpl {
 	return &OtherAddressImpl{
-		t:    t,
-		seed: seed,
+		t: t,
 	}
 }
 
 func (n *OtherAddressImpl) MarshalBinary() (data []byte, err error) {
-	require.Failf(
+	require.Fail(
 		n.t,
 		"failure",
-		"MarshalBinary() should not be called on a OtherAddressImpl, test-seed: %d",
-		n.seed,
+		"MarshalBinary() should not be called on a OtherAddressImpl",
 	)
 	return nil, nil
 }
 
 func (n *OtherAddressImpl) UnmarshalBinary(data []byte) error {
-	require.Failf(
+	require.Fail(
 		n.t,
 		"failure",
-		"UnmarshalBinary() should not be called on a OtherAddressImpl, test-seed: %d",
-		n.seed,
+		"UnmarshalBinary() should not be called on a OtherAddressImpl",
 	)
 	return nil
 }
 
 func (n *OtherAddressImpl) String() string {
-	require.Failf(
+	require.Fail(
 		n.t,
 		"failure",
-		"String() should not be called on a OtherAddressImpl, test-seed: %d",
-		n.seed,
+		"String() should not be called on a OtherAddressImpl",
 	)
 	return ""
 }
 
 func (n *OtherAddressImpl) Equal(address pw.Address) bool {
-	require.Failf(
+	require.Fail(
 		n.t,
 		"failure",
-		"Equal() should not be called on a OtherAddressImpl, test-seed: %d",
-		n.seed,
+		"Equal() should not be called on a OtherAddressImpl",
 	)
 	return false
 }
