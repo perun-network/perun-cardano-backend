@@ -7,12 +7,12 @@ import (
 )
 
 type SigningRequest struct {
-	AccountPubKey PubKey `json:"sPubKey"`
-	Message       string `json:"sMessage"`
+	AccountPubKey Address `json:"sPubKey"`
+	Message       string  `json:"sMessage"`
 }
 
 // MakeSigningRequest returns a new SigningRequest.
-func MakeSigningRequest(accountPubKey PubKey, message []byte) SigningRequest {
+func MakeSigningRequest(accountPubKey Address, message []byte) SigningRequest {
 	return SigningRequest{
 		AccountPubKey: accountPubKey,
 		Message:       hex.EncodeToString(message),
@@ -21,15 +21,15 @@ func MakeSigningRequest(accountPubKey PubKey, message []byte) SigningRequest {
 
 type VerificationRequest struct {
 	SigWrapper SignatureWrapper `json:"vSignature"`
-	PubKey     PubKey           `json:"vPubKey"`
+	Address    Address          `json:"vPubKey"`
 	Message    string           `json:"vMessage"`
 }
 
 // MakeVerificationRequest expects the signature to be of length SignatureLength and returns a new VerificationRequest.
-func MakeVerificationRequest(sig wallet.Sig, pubKey PubKey, message []byte) VerificationRequest {
+func MakeVerificationRequest(sig wallet.Sig, address Address, message []byte) VerificationRequest {
 	return VerificationRequest{
 		SigWrapper: SignatureWrapper{Signature: hex.EncodeToString(sig)},
-		PubKey:     pubKey,
+		Address:    address,
 		Message:    hex.EncodeToString(message),
 	}
 }
@@ -38,7 +38,7 @@ type SignatureWrapper struct {
 	Signature string `json:"getSignature"`
 }
 
-type KeyAvailabilityRequest = PubKey
+type KeyAvailabilityRequest = Address
 
 type SigningResponse = SignatureWrapper
 

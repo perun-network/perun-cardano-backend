@@ -19,9 +19,9 @@ func MakeRemoteBackend(remote Remote) RemoteBackend {
 	return RemoteBackend{remote}
 }
 
-// NewAddress returns a pointer to a new empty PubKey.
+// NewAddress returns a pointer to a new, empty address.
 func (b RemoteBackend) NewAddress() wallet.Address {
-	return new(PubKey)
+	return new(Address)
 }
 
 // DecodeSig reads SignatureLength bytes from the given reader and returns the read signature.
@@ -36,7 +36,7 @@ func (b RemoteBackend) DecodeSig(reader io.Reader) (wallet.Sig, error) {
 // VerifySignature returns true, iff the given signature is valid for the given message under the public key associated
 // with the given address.
 func (b RemoteBackend) VerifySignature(msg []byte, sig wallet.Sig, a wallet.Address) (bool, error) {
-	pubKey, ok := a.(*PubKey)
+	address, ok := a.(*Address)
 	if !ok {
 		return false, fmt.Errorf("invalid Address for signature verification")
 	}
@@ -47,7 +47,7 @@ func (b RemoteBackend) VerifySignature(msg []byte, sig wallet.Sig, a wallet.Addr
 			len(sig),
 		)
 	}
-	request := MakeVerificationRequest(sig, *pubKey, msg)
+	request := MakeVerificationRequest(sig, *address, msg)
 	verificationResponse, err := b.walletServer.CallVerify(request)
 	if err != nil {
 		return false, fmt.Errorf("wallet server could not verify message: %w", err)

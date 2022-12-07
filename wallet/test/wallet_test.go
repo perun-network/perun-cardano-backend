@@ -13,7 +13,7 @@ func TestRemoteWallet_Trace(t *testing.T) {
 	backend := wallet.MakeRemoteBackend(r)
 	address := backend.NewAddress()
 	err := address.UnmarshalBinary(r.MockPubKeyBytes)
-	require.NoErrorf(t, err, "unable to marshal binary address into PubKey, test-seed: %d", seed)
+	require.NoErrorf(t, err, "unable to marshal binary address into Address, test-seed: %d", seed)
 	require.Equalf(t, &r.MockPubKey, address, "unmarshalled address is not as expected, test-seed: %d", seed)
 	require.NotEqualf(
 		t,
@@ -24,15 +24,15 @@ func TestRemoteWallet_Trace(t *testing.T) {
 	)
 
 	err = backend.NewAddress().UnmarshalBinary(r.InvalidPubKeyBytes)
-	require.Errorf(t, err, "unmarshalled invalid binary address into PubKey, test-seed: %d", seed)
+	require.Errorf(t, err, "unmarshalled invalid binary address into Address, test-seed: %d", seed)
 
 	binaryAddress, err := address.MarshalBinary()
-	require.NoErrorf(t, err, "unable to marshal valid address PubKey into binary, test-seed: %d", seed)
+	require.NoErrorf(t, err, "unable to marshal valid address Address into binary, test-seed: %d", seed)
 	require.Equalf(
 		t,
 		r.MockPubKeyBytes,
 		binaryAddress,
-		"marshalled PubKey is not as expected, test-seed: %d",
+		"marshalled Address is not as expected, test-seed: %d",
 		seed,
 	)
 

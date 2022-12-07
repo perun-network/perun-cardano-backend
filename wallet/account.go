@@ -7,26 +7,26 @@ import (
 
 // RemoteAccount represents a cardano account. The secrets are stored on the associated remote walletServer.
 type RemoteAccount struct {
-	AccountPubKey PubKey
-	walletServer  Remote
+	AccountAddress Address
+	walletServer   Remote
 }
 
 // MakeRemoteAccount returns a new RemoteAccount instance.
-func MakeRemoteAccount(pubKey PubKey, r Remote) RemoteAccount {
+func MakeRemoteAccount(pubKey Address, r Remote) RemoteAccount {
 	return RemoteAccount{
-		AccountPubKey: pubKey,
-		walletServer:  r,
+		AccountAddress: pubKey,
+		walletServer:   r,
 	}
 }
 
-// Address returns the PubKey associated with this account.
+// Address returns the Address associated with this account.
 func (a RemoteAccount) Address() wallet.Address {
-	return &a.AccountPubKey
+	return &a.AccountAddress
 }
 
 // SignData signs arbitrary data with this account.
 func (a RemoteAccount) SignData(data []byte) (wallet.Sig, error) {
-	request := MakeSigningRequest(a.AccountPubKey, data)
+	request := MakeSigningRequest(a.AccountAddress, data)
 
 	signatureResponse, err := a.walletServer.CallSign(request)
 	if err != nil {

@@ -15,7 +15,7 @@ type Remote interface {
 	// CallVerify is the endpoint for verifying signatures with the perun-cardano-wallet.
 	CallVerify(VerificationRequest) (VerificationResponse, error)
 	// CallKeyAvailable is the endpoint for verifying that the connected perun-cardano-wallet has the private key to
-	// a given PubKey.
+	// a given Address.
 	CallKeyAvailable(request KeyAvailabilityRequest) (KeyAvailabilityResponse, error)
 }
 

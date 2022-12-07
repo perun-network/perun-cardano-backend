@@ -88,7 +88,7 @@ func TestPubKey_MarshalBinary_InvalidPubKey(t *testing.T) {
 func TestPubKey_UnmarshalBinary_ValidPubKeyBytes(t *testing.T) {
 	seed := SetSeed()
 	r := NewMockRemote()
-	uut := wallet.PubKey{}
+	uut := wallet.Address{}
 	err := uut.UnmarshalBinary(r.MockPubKeyBytes)
 	require.NoErrorf(t, err, "unable to unmarshal valid public key bytes, test-seed: %d", seed)
 	require.Equalf(
@@ -103,7 +103,7 @@ func TestPubKey_UnmarshalBinary_ValidPubKeyBytes(t *testing.T) {
 func TestPubKey_UnmarshalBinary_InvalidPubKeyBytes(t *testing.T) {
 	seed := SetSeed()
 	r := NewMockRemote()
-	uut := wallet.PubKey{}
+	uut := wallet.Address{}
 	err := uut.UnmarshalBinary(r.InvalidPubKeyBytes)
 	require.Errorf(
 		t,
@@ -119,7 +119,7 @@ func TestPubKey_String(t *testing.T) {
 	r := NewMockRemote()
 	require.Equalf(
 		t,
-		r.MockPubKey.Key,
+		r.MockPubKey.PubKey,
 		r.MockPubKey.String(),
 		"wrong string representation for public key, test-seed: %d",
 		seed,
@@ -130,7 +130,7 @@ func TestPubKey_Equal(t *testing.T) {
 	seed := SetSeed()
 	r := NewMockRemote()
 	a := &r.MockPubKey
-	b := &wallet.PubKey{Key: hex.EncodeToString(r.MockPubKeyBytes)}
+	b := &wallet.Address{PubKey: hex.EncodeToString(r.MockPubKeyBytes)}
 	require.Truef(t, a.Equal(b), "public keys that have the same key string should be equal, test-seed: %d", seed)
 	require.Truef(t, b.Equal(a), "public key equality should be commutative, test-seed: %d", seed)
 	require.Falsef(

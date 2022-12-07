@@ -9,21 +9,22 @@ import (
 // PubKeyLength is the length of the public verification key part of a Cardano `ed25519` keypair in bytes.
 const PubKeyLength = 32
 
-// TODO: the PubKey implementation of wallet.Address only represents the public verification key.
+// TODO: the Address implementation of wallet.Address only represents the public verification key.
 // 	Cardano addresses also carry staking information though and look something like this:
 //  `addr1vpu5vlrf4xkxv2qpwngf6cjhtw542ayty80v8dyr49rf5eg0yu80w`.
 //  We should move to the latter address representation at some point.
 
-// PubKey represents the public verification key part of a Cardano `ed25519` keypair
-// (Ledger.Crypto.PubKey in the plutus-ledger library). The Key is a hex string (without "0x") representing the bytes of
-// the public key.
-type PubKey struct {
-	Key string `json:"getPubKey"`
+// Address carries a public key that represents the public verification key part of a Cardano `ed25519` keypair
+// (Ledger.Crypto.Address in the plutus-ledger library). The PubKey is a hex string (without "0x") representing the
+// bytes of the public key.
+type Address struct {
+	PubKey string `json:"getPubKey"`
 }
 
-// MarshalBinary decodes the hexadecimal Key into byte representation. The returned byte slice has length PubKeyLength.
-func (a PubKey) MarshalBinary() ([]byte, error) {
-	key, err := hex.DecodeString(a.Key)
+// MarshalBinary decodes public key of this address into its byte representation.
+// The returned byte slice has length PubKeyLength.
+func (a Address) MarshalBinary() ([]byte, error) {
+	key, err := hex.DecodeString(a.PubKey)
 	if err != nil {
 		return nil, fmt.Errorf("pubkey string is not a hex string: %w", err)
 	}
@@ -37,29 +38,30 @@ func (a PubKey) MarshalBinary() ([]byte, error) {
 	return key, nil
 }
 
-// UnmarshalBinary expects a byte slice of length PubKeyLength and decodes it into the PubKey receiver.
-func (a *PubKey) UnmarshalBinary(data []byte) error {
+// UnmarshalBinary expects a byte slice of length PubKeyLength and decodes it into the received Address.
+func (a *Address) UnmarshalBinary(data []byte) error {
 	if len(data) != PubKeyLength {
 		return fmt.Errorf("public key has incorrect length. expected: %d bytes actual: %d bytes",
 			PubKeyLength,
 			len(data))
 	}
-	a.Key = hex.EncodeToString(data)
+	a.PubKey = hex.EncodeToString(data)
 	return nil
 }
 
-// String returns the key string
-func (a PubKey) String() string {
-	return a.Key
+// TODO: This should probably return an address like `addr1vpu5vlrf4xkxv2qpwngf6cjhtw542ayty80v8dyr49rf5eg0yu80w`
+// String returns the public key string.
+func (a Address) String() string {
+	return a.PubKey
 }
 
-// Equal returns true, iff the given address is of type PubKey and their Key values are equal.
-func (a PubKey) Equal(other wallet.Address) bool {
-	otherPubKey, ok := other.(*PubKey)
+// Equal returns true, iff the given address is of type Address and their public keys are equal.
+func (a Address) Equal(other wallet.Address) bool {
+	otherAddress, ok := other.(*Address)
 	if !ok {
 		return false
 	}
-	return a.Key == otherPubKey.Key
+	return a.PubKey == otherAddress.PubKey
 }
 
-var _ wallet.Address = (*PubKey)(nil)
+var _ wallet.Address = (*Address)(nil)

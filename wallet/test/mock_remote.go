@@ -27,12 +27,12 @@ func SetSeed() int64 {
 // The default implementation has one valid signature tuple:
 // (MockMessage, MockSignature, MockPubKey).
 type MockRemote struct {
-	MockPubKey      wallet.PubKey
+	MockPubKey      wallet.Address
 	MockPubKeyBytes []byte
-	// UnavailablePubKey is a valid wallet.PubKey that has associated account (private key) in this remote wallet.
-	UnavailablePubKey wallet.PubKey
+	// UnavailablePubKey is a valid wallet.Address that has associated account (private key) in this remote wallet.
+	UnavailablePubKey wallet.Address
 	// InvalidPubKey is invalid because it is not exactly wallet.PubKeyLength bytes long.
-	InvalidPubKey      wallet.PubKey
+	InvalidPubKey      wallet.Address
 	InvalidPubKeyBytes []byte
 
 	MockSignature       []byte
@@ -71,13 +71,13 @@ func initializeRandomValues(r *MockRemote) {
 
 	r.MockPubKeyBytes = make([]byte, wallet.PubKeyLength)
 	rand.Read(r.MockPubKeyBytes)
-	r.MockPubKey = wallet.PubKey{Key: hex.EncodeToString(r.MockPubKeyBytes)}
+	r.MockPubKey = wallet.Address{PubKey: hex.EncodeToString(r.MockPubKeyBytes)}
 
 	unavailablePubKeyBytes := make([]byte, wallet.PubKeyLength)
 	for bytes.Equal(r.MockPubKeyBytes, unavailablePubKeyBytes) {
 		rand.Read(unavailablePubKeyBytes)
 	}
-	r.UnavailablePubKey = wallet.PubKey{Key: hex.EncodeToString(unavailablePubKeyBytes)}
+	r.UnavailablePubKey = wallet.Address{PubKey: hex.EncodeToString(unavailablePubKeyBytes)}
 
 	if rand.Int()%2 == 0 {
 		r.InvalidPubKeyBytes = make([]byte, rand.Intn(wallet.PubKeyLength))
@@ -85,7 +85,7 @@ func initializeRandomValues(r *MockRemote) {
 		r.InvalidPubKeyBytes = make([]byte, rand.Intn(maxInvalidPubKeyLength-wallet.PubKeyLength)+wallet.PubKeyLength+1)
 	}
 	rand.Read(r.InvalidPubKeyBytes)
-	r.InvalidPubKey = wallet.PubKey{Key: hex.EncodeToString(r.InvalidPubKeyBytes)}
+	r.InvalidPubKey = wallet.Address{PubKey: hex.EncodeToString(r.InvalidPubKeyBytes)}
 
 	r.MockSignature = make([]byte, wallet.SignatureLength)
 	rand.Read(r.MockSignature)
@@ -127,10 +127,10 @@ func makeCallSignDefault(r *MockRemote) func(request wallet.SigningRequest) (wal
 
 func makeCallVerifyDefault(r *MockRemote) func(wallet.VerificationRequest) (wallet.VerificationResponse, error) {
 	return func(request wallet.VerificationRequest) (wallet.VerificationResponse, error) {
-		if !request.PubKey.Equal(&r.MockPubKey) && !request.PubKey.Equal(&r.UnavailablePubKey) {
+		if !request.Address.Equal(&r.MockPubKey) && !request.Address.Equal(&r.UnavailablePubKey) {
 			return false, fmt.Errorf("invalid public key for mock remote")
 		}
-		if request.PubKey.Equal(&r.UnavailablePubKey) {
+		if request.Address.Equal(&r.UnavailablePubKey) {
 			return false, nil
 		}
 
