@@ -11,15 +11,15 @@ import (
 func TestRemoteAccount_Address(t *testing.T) {
 	rng := pkgtest.Prng(t)
 	r := test.NewMockRemote(rng)
-	uut := wallet.MakeRemoteAccount(r.MockPubKey, r)
+	uut := wallet.MakeRemoteAccount(r.MockAddress, r)
 	actualAddress := uut.Address()
-	require.Equal(t, &r.MockPubKey, actualAddress, "Address returns the wrong account address")
+	require.Equal(t, &r.MockAddress, actualAddress, "Address returns the wrong account address")
 }
 
 func TestRemoteAccount_SignData(t *testing.T) {
 	rng := pkgtest.Prng(t)
 	r := test.NewMockRemote(rng)
-	uut := wallet.MakeRemoteAccount(r.MockPubKey, r)
+	uut := wallet.MakeRemoteAccount(r.MockAddress, r)
 	actualSignature, err := uut.SignData(r.MockMessage)
 	require.NoError(t, err, "unable to sign valid data for valid address")
 	require.Equal(t, r.MockSignature, actualSignature, "signature is wrong")

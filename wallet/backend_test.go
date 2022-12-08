@@ -18,7 +18,7 @@ func TestBackend_NewAddress(t *testing.T) {
 	uut := wallet.MakeRemoteBackend(r)
 	actualAddress := uut.NewAddress()
 	_, ok := actualAddress.(*wallet.Address)
-	require.True(t, ok, "NewAddress() does not return a Address")
+	require.True(t, ok, "NewAddress() does not return an Address")
 }
 
 func TestBackend_DecodeSig(t *testing.T) {
@@ -69,15 +69,15 @@ func TestBackend_VerifySignature(t *testing.T) {
 	rng := pkgtest.Prng(t)
 	r := test.NewMockRemote(rng)
 	uut := wallet.MakeRemoteBackend(r)
-	valid, err := uut.VerifySignature(r.MockMessage, r.MockSignature, &r.MockPubKey)
+	valid, err := uut.VerifySignature(r.MockMessage, r.MockSignature, &r.MockAddress)
 	require.NoError(t, err, "received error when verifying a valid signature")
 	require.True(t, valid, "did not verify a valid signature as valid")
 
-	valid, err = uut.VerifySignature(r.MockMessage, r.OtherSignature, &r.MockPubKey)
+	valid, err = uut.VerifySignature(r.MockMessage, r.OtherSignature, &r.MockAddress)
 	require.NoError(t, err, "received an error when verifying an invalid signature")
 	require.False(t, valid, "verified an invalid signature as valid")
 
-	_, err = uut.VerifySignature(r.MockMessage, r.InvalidSignatureShorter, &r.MockPubKey)
+	_, err = uut.VerifySignature(r.MockMessage, r.InvalidSignatureShorter, &r.MockAddress)
 	require.Errorf(
 		t,
 		err,
@@ -85,7 +85,7 @@ func TestBackend_VerifySignature(t *testing.T) {
 		len(r.InvalidSignatureShorter),
 	)
 
-	_, err = uut.VerifySignature(r.MockMessage, r.InvalidSignatureLonger, &r.MockPubKey)
+	_, err = uut.VerifySignature(r.MockMessage, r.InvalidSignatureLonger, &r.MockAddress)
 	require.Errorf(
 		t,
 		err,

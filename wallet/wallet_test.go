@@ -13,24 +13,24 @@ func TestRemoteWallet_Trace(t *testing.T) {
 	r := test.NewMockRemote(rng)
 	backend := wallet.MakeRemoteBackend(r)
 	address := backend.NewAddress()
-	err := address.UnmarshalBinary(r.MockPubKeyBytes)
+	err := address.UnmarshalBinary(r.MockAddressBytes)
 	require.NoError(t, err, "unable to marshal binary address into Address")
-	require.Equal(t, &r.MockPubKey, address, "unmarshalled address is not as expected")
+	require.Equal(t, &r.MockAddress, address, "unmarshalled address is not as expected")
 	require.NotEqual(
 		t,
-		r.UnavailablePubKey,
+		r.UnavailableAddress,
 		address,
 		"unmarshalled address is equal to a wrong address",
 	)
 
-	err = backend.NewAddress().UnmarshalBinary(r.InvalidPubKeyBytes)
+	err = backend.NewAddress().UnmarshalBinary(r.InvalidAddressBytes)
 	require.Error(t, err, "unmarshalled invalid binary address into Address")
 
 	binaryAddress, err := address.MarshalBinary()
 	require.NoError(t, err, "unable to marshal valid address Address into binary")
 	require.Equal(
 		t,
-		r.MockPubKeyBytes,
+		r.MockAddressBytes,
 		binaryAddress,
 		"marshalled Address is not as expected",
 	)
@@ -39,12 +39,12 @@ func TestRemoteWallet_Trace(t *testing.T) {
 	account, err := w.Unlock(address)
 	require.NoError(t, err, "failed to unlock valid address")
 
-	_, err = w.Unlock(&r.UnavailablePubKey)
+	_, err = w.Unlock(&r.UnavailableAddress)
 	require.Error(t, err, "unlocked an account for an unavailable public key")
 
 	require.Equal(
 		t,
-		&r.MockPubKey,
+		&r.MockAddress,
 		account.Address(),
 		"account has address with unexpected public key",
 	)
@@ -65,16 +65,16 @@ func TestRemoteWallet_Unlock(t *testing.T) {
 	rng := pkgtest.Prng(t)
 	r := test.NewMockRemote(rng)
 	w := wallet.NewRemoteWallet(r)
-	account, err := w.Unlock(&r.MockPubKey)
+	account, err := w.Unlock(&r.MockAddress)
 	require.NoError(t, err, "unable to unlock available address")
-	require.Equal(t, &r.MockPubKey, account.Address(), "wrong address in account")
+	require.Equal(t, &r.MockAddress, account.Address(), "wrong address in account")
 	require.NotEqual(
 		t,
-		r.UnavailablePubKey,
+		r.UnavailableAddress,
 		account.Address(),
 		"Wrong address in account. This is probably because of wrong implementation of Address.Equal",
 	)
-	_, err = w.Unlock(&r.UnavailablePubKey)
+	_, err = w.Unlock(&r.UnavailableAddress)
 	require.Error(
 		t,
 		err,

@@ -10,15 +10,15 @@ import (
 
 // MockRemote should only be instantiated using NewMockRemote.
 // The default implementation has one valid signature tuple:
-// (MockMessage, MockSignature, MockPubKey).
+// (MockMessage, MockSignature, MockAddress).
 type MockRemote struct {
-	MockPubKey      wallet.Address
-	MockPubKeyBytes []byte
-	// UnavailablePubKey is a valid wallet.Address that has associated account (private key) in this remote wallet.
-	UnavailablePubKey wallet.Address
-	// InvalidPubKey is invalid because it is not exactly wallet.PubKeyLength bytes long.
-	InvalidPubKey      wallet.Address
-	InvalidPubKeyBytes []byte
+	MockAddress      wallet.Address
+	MockAddressBytes []byte
+	// UnavailableAddress is a valid wallet.Address that has associated account (private key) in this remote wallet.
+	UnavailableAddress wallet.Address
+	// InvalidAddress is invalid because it is not exactly wallet.PubKeyLength bytes long.
+	InvalidAddress      wallet.Address
+	InvalidAddressBytes []byte
 
 	MockSignature       []byte
 	MockSignatureString string
@@ -54,23 +54,23 @@ func initializeRandomValues(r *MockRemote, rng *rand.Rand) {
 	const maxInvalidPubKeyLength = wallet.PubKeyLength * 2
 	const maxInvalidSignatureLength = wallet.SignatureLength * 2
 
-	r.MockPubKeyBytes = make([]byte, wallet.PubKeyLength)
-	rng.Read(r.MockPubKeyBytes)
-	r.MockPubKey = wallet.Address{PubKey: hex.EncodeToString(r.MockPubKeyBytes)}
+	r.MockAddressBytes = make([]byte, wallet.PubKeyLength)
+	rng.Read(r.MockAddressBytes)
+	r.MockAddress = wallet.Address{PubKey: hex.EncodeToString(r.MockAddressBytes)}
 
 	unavailablePubKeyBytes := make([]byte, wallet.PubKeyLength)
-	for bytes.Equal(r.MockPubKeyBytes, unavailablePubKeyBytes) {
+	for bytes.Equal(r.MockAddressBytes, unavailablePubKeyBytes) {
 		rng.Read(unavailablePubKeyBytes)
 	}
-	r.UnavailablePubKey = wallet.Address{PubKey: hex.EncodeToString(unavailablePubKeyBytes)}
+	r.UnavailableAddress = wallet.Address{PubKey: hex.EncodeToString(unavailablePubKeyBytes)}
 
 	if rng.Int()%2 == 0 {
-		r.InvalidPubKeyBytes = make([]byte, rng.Intn(wallet.PubKeyLength))
+		r.InvalidAddressBytes = make([]byte, rng.Intn(wallet.PubKeyLength))
 	} else {
-		r.InvalidPubKeyBytes = make([]byte, rng.Intn(maxInvalidPubKeyLength-wallet.PubKeyLength)+wallet.PubKeyLength+1)
+		r.InvalidAddressBytes = make([]byte, rng.Intn(maxInvalidPubKeyLength-wallet.PubKeyLength)+wallet.PubKeyLength+1)
 	}
-	rng.Read(r.InvalidPubKeyBytes)
-	r.InvalidPubKey = wallet.Address{PubKey: hex.EncodeToString(r.InvalidPubKeyBytes)}
+	rng.Read(r.InvalidAddressBytes)
+	r.InvalidAddress = wallet.Address{PubKey: hex.EncodeToString(r.InvalidAddressBytes)}
 
 	r.MockSignature = make([]byte, wallet.SignatureLength)
 	rng.Read(r.MockSignature)
@@ -99,7 +99,7 @@ func (m *MockRemote) SetCallSign(f func(request wallet.SigningRequest) (wallet.S
 
 func makeCallSignDefault(r *MockRemote) func(request wallet.SigningRequest) (wallet.SigningResponse, error) {
 	return func(request wallet.SigningRequest) (wallet.SigningResponse, error) {
-		if !request.AccountPubKey.Equal(&r.MockPubKey) {
+		if !request.AccountPubKey.Equal(&r.MockAddress) {
 			return wallet.SigningResponse{}, fmt.Errorf("invalid public key for mock remote")
 		}
 
@@ -112,10 +112,10 @@ func makeCallSignDefault(r *MockRemote) func(request wallet.SigningRequest) (wal
 
 func makeCallVerifyDefault(r *MockRemote) func(wallet.VerificationRequest) (wallet.VerificationResponse, error) {
 	return func(request wallet.VerificationRequest) (wallet.VerificationResponse, error) {
-		if !request.Address.Equal(&r.MockPubKey) && !request.Address.Equal(&r.UnavailablePubKey) {
+		if !request.Address.Equal(&r.MockAddress) && !request.Address.Equal(&r.UnavailableAddress) {
 			return false, fmt.Errorf("invalid public key for mock remote")
 		}
-		if request.Address.Equal(&r.UnavailablePubKey) {
+		if request.Address.Equal(&r.UnavailableAddress) {
 			return false, nil
 		}
 
@@ -142,7 +142,7 @@ func makeCallKeyAvailableDefault(r *MockRemote) func(wallet.KeyAvailabilityReque
 		if err != nil {
 			return false, fmt.Errorf("invalid pubKey: %w", err)
 		}
-		return request.Equal(&r.MockPubKey), nil
+		return request.Equal(&r.MockAddress), nil
 	}
 }
 
