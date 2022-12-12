@@ -1,15 +1,15 @@
-package wallet_test
+package address_test
 
 import (
 	"encoding/hex"
 	"github.com/stretchr/testify/require"
-	"perun.network/perun-cardano-backend/wallet"
+	"perun.network/perun-cardano-backend/wallet/address"
 	"perun.network/perun-cardano-backend/wallet/test"
 	pkgtest "polycry.pt/poly-go/test"
 	"testing"
 )
 
-func TestAddress_MarshalBinary_ValidAddress(t *testing.T) {
+func TestAddress_MarshalBinary(t *testing.T) {
 	rng := pkgtest.Prng(t)
 	r := test.NewMockRemote(rng)
 	uut := r.MockAddress
@@ -17,30 +17,16 @@ func TestAddress_MarshalBinary_ValidAddress(t *testing.T) {
 	require.NoError(t, err, "unable to marshal valid address")
 	require.Equal(
 		t,
-		r.MockAddressBytes,
+		r.MockPubKeyBytes[:],
 		actualBytes,
 		"wrong bytes representation of marshalled address")
-}
-
-func TestAddress_MarshalBinary_InvalidAddress(t *testing.T) {
-	rng := pkgtest.Prng(t)
-	r := test.NewMockRemote(rng)
-	uut := r.InvalidAddress
-	actualBytes, err := uut.MarshalBinary()
-	require.Errorf(
-		t,
-		err,
-		"failed to error when marshalling invalid address: %s with length: %d",
-		uut.String(),
-		len(actualBytes),
-	)
 }
 
 func TestAddress_UnmarshalBinary_ValidAddressBytes(t *testing.T) {
 	rng := pkgtest.Prng(t)
 	r := test.NewMockRemote(rng)
-	uut := wallet.Address{}
-	err := uut.UnmarshalBinary(r.MockAddressBytes)
+	uut := address.Address{}
+	err := uut.UnmarshalBinary(r.MockPubKeyBytes[:])
 	require.NoError(t, err, "unable to unmarshal valid address bytes")
 	require.Equal(
 		t,
@@ -53,13 +39,13 @@ func TestAddress_UnmarshalBinary_ValidAddressBytes(t *testing.T) {
 func TestAddress_UnmarshalBinary_InvalidAddressBytes(t *testing.T) {
 	rng := pkgtest.Prng(t)
 	r := test.NewMockRemote(rng)
-	uut := wallet.Address{}
-	err := uut.UnmarshalBinary(r.InvalidAddressBytes)
+	uut := address.Address{}
+	err := uut.UnmarshalBinary(r.InvalidPubKeyBytes)
 	require.Errorf(
 		t,
 		err,
 		"failed to error when unmarshalling invalid public key bytes with length: %d",
-		len(r.InvalidAddressBytes),
+		len(r.InvalidPubKeyBytes),
 	)
 }
 
@@ -68,7 +54,7 @@ func TestAddress_String(t *testing.T) {
 	r := test.NewMockRemote(rng)
 	require.Equal(
 		t,
-		r.MockAddress.PubKey,
+		hex.EncodeToString(r.MockPubKeyBytes[:]),
 		r.MockAddress.String(),
 		"wrong string representation for public key",
 	)
@@ -78,7 +64,7 @@ func TestAddress_Equal(t *testing.T) {
 	rng := pkgtest.Prng(t)
 	r := test.NewMockRemote(rng)
 	a := &r.MockAddress
-	b := &wallet.Address{PubKey: hex.EncodeToString(r.MockAddressBytes)}
+	b := &address.Address{PubKey: r.MockPubKeyBytes}
 	require.True(t, a.Equal(b), "addresses that have the same public key should be equal")
 	require.True(t, b.Equal(a), "address equality should be commutative")
 	require.False(

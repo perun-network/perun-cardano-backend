@@ -13,8 +13,8 @@ func TestRemoteWallet_Trace(t *testing.T) {
 	r := test.NewMockRemote(rng)
 	backend := wallet.MakeRemoteBackend(r)
 	address := backend.NewAddress()
-	err := address.UnmarshalBinary(r.MockAddressBytes)
-	require.NoError(t, err, "unable to marshal binary address into Address")
+	err := address.UnmarshalBinary(r.MockPubKeyBytes[:])
+	require.NoError(t, err, "unable to marshal binary address into PubKey")
 	require.Equal(t, &r.MockAddress, address, "unmarshalled address is not as expected")
 	require.NotEqual(
 		t,
@@ -23,16 +23,16 @@ func TestRemoteWallet_Trace(t *testing.T) {
 		"unmarshalled address is equal to a wrong address",
 	)
 
-	err = backend.NewAddress().UnmarshalBinary(r.InvalidAddressBytes)
-	require.Error(t, err, "unmarshalled invalid binary address into Address")
+	err = backend.NewAddress().UnmarshalBinary(r.InvalidPubKeyBytes)
+	require.Error(t, err, "unmarshalled invalid binary address into PubKey")
 
 	binaryAddress, err := address.MarshalBinary()
-	require.NoError(t, err, "unable to marshal valid address Address into binary")
+	require.NoError(t, err, "unable to marshal valid address PubKey into binary")
 	require.Equal(
 		t,
-		r.MockAddressBytes,
+		r.MockPubKeyBytes[:],
 		binaryAddress,
-		"marshalled Address is not as expected",
+		"marshalled PubKey is not as expected",
 	)
 
 	w := wallet.NewRemoteWallet(r)
@@ -72,7 +72,7 @@ func TestRemoteWallet_Unlock(t *testing.T) {
 		t,
 		r.UnavailableAddress,
 		account.Address(),
-		"Wrong address in account. This is probably because of wrong implementation of Address.Equal",
+		"Wrong address in account. This is probably because of wrong implementation of PubKey.Equal",
 	)
 	_, err = w.Unlock(&r.UnavailableAddress)
 	require.Error(

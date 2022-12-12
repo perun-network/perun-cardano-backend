@@ -13,7 +13,7 @@ func TestRemoteAccount_Address(t *testing.T) {
 	r := test.NewMockRemote(rng)
 	uut := wallet.MakeRemoteAccount(r.MockAddress, r)
 	actualAddress := uut.Address()
-	require.Equal(t, &r.MockAddress, actualAddress, "Address returns the wrong account address")
+	require.Equal(t, &r.MockAddress, actualAddress, "PubKey returns the wrong account address")
 }
 
 func TestRemoteAccount_SignData(t *testing.T) {

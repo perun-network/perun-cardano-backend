@@ -3,6 +3,8 @@ package wallet
 import (
 	"fmt"
 	"perun.network/go-perun/wallet"
+	"perun.network/perun-cardano-backend/wallet/address"
+	"perun.network/perun-cardano-backend/wire"
 )
 
 // RemoteWallet is a cardano signing wallet using a remote wallet server.
@@ -30,18 +32,18 @@ func (w *RemoteWallet) DecrementUsage(address wallet.Address) {
 
 // Unlock returns the account of the given address, iff the wallet server associated with this RemoteWallet
 // has that account.
-func (w *RemoteWallet) Unlock(address wallet.Address) (wallet.Account, error) {
-	rwAddress, ok := address.(*Address)
+func (w *RemoteWallet) Unlock(addr wallet.Address) (wallet.Account, error) {
+	rwAddress, ok := addr.(*address.Address)
 	if !ok {
-		return nil, fmt.Errorf("invalid address for signature verification (expected type Address)")
+		return nil, fmt.Errorf("invalid address for signature verification (expected type PubKey)")
 	}
 
-	available, err := w.walletServer.CallKeyAvailable(*rwAddress)
+	available, err := w.walletServer.CallKeyAvailable(wire.MakeKeyAvailabilityRequest(*rwAddress))
 	if err != nil {
 		return nil, fmt.Errorf("wallet server could not assert key availability: %w", err)
 	}
 	if !available {
-		return nil, fmt.Errorf("wallet server has no private key for public key %s", rwAddress.PubKey)
+		return nil, fmt.Errorf("wallet server has no private key for address %s", rwAddress)
 	}
 	return MakeRemoteAccount(*rwAddress, w.walletServer), nil
 }

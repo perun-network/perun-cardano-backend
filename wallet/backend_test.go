@@ -7,7 +7,9 @@ import (
 	"io"
 	"math/rand"
 	"perun.network/perun-cardano-backend/wallet"
+	"perun.network/perun-cardano-backend/wallet/address"
 	"perun.network/perun-cardano-backend/wallet/test"
+	"perun.network/perun-cardano-backend/wire"
 	pkgtest "polycry.pt/poly-go/test"
 	"testing"
 )
@@ -17,8 +19,8 @@ func TestBackend_NewAddress(t *testing.T) {
 	r := test.NewMockRemote(rng)
 	uut := wallet.MakeRemoteBackend(r)
 	actualAddress := uut.NewAddress()
-	_, ok := actualAddress.(*wallet.Address)
-	require.True(t, ok, "NewAddress() does not return an Address")
+	_, ok := actualAddress.(*address.Address)
+	require.True(t, ok, "NewAddress() does not return an PubKey")
 }
 
 func TestBackend_DecodeSig(t *testing.T) {
@@ -44,14 +46,14 @@ func TestBackend_DecodeSig(t *testing.T) {
 		t,
 		err,
 		"only one signature (%d bytes) should be read from given reader",
-		wallet.SignatureLength,
+		wire.SignatureLength,
 	)
 	require.Equalf(
 		t,
 		randomBytes,
 		rest,
 		"only one signature (%d bytes) should be read from given reader. No more should be read from the reader",
-		wallet.SignatureLength,
+		wire.SignatureLength,
 	)
 
 	invalidReader := bytes.NewReader(r.InvalidSignatureShorter)
