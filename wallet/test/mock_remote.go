@@ -50,7 +50,7 @@ func NewMockRemote(rng *rand.Rand) *MockRemote {
 }
 
 func initializeRandomValues(r *MockRemote, rng *rand.Rand) {
-	const maxMessageLength = 2 ^ 8 // in bytes
+	const maxMessageLength = 0x100 // in bytes
 	const maxInvalidPubKeyLength = wallet.PubKeyLength * 2
 	const maxInvalidSignatureLength = wallet.SignatureLength * 2
 
