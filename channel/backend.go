@@ -2,9 +2,9 @@ package channel
 
 import (
 	"fmt"
-	"golang.org/x/crypto/sha3"
 	pchannel "perun.network/go-perun/channel"
 	"perun.network/go-perun/wallet"
+	"perun.network/perun-cardano-backend/blake2b224"
 )
 
 // backend implements the backend interface
@@ -12,14 +12,20 @@ import (
 // `Backend` variable.
 type backend struct{}
 
-// CalcID calculates the channel-id from the parameters
+// CalcID calculates the channel-id from the parameters.
 func (b backend) CalcID(params *pchannel.Params) pchannel.ID {
 	encodedParams, err := EncodeParams(params)
 	if err != nil {
 		panic(fmt.Sprintf("cannot calculate channel id: %v", err))
 	}
-
-	return sha3.Sum256(encodedParams)
+	hash, err := blake2b224.Sum224(encodedParams)
+	if err != nil {
+		panic(fmt.Sprintf("unable to hash encoded parameters to compute channel-id: %v", err))
+	}
+	// We extend the hash with zero-padding to arrive at the 32 byte channel id used by go-perun.
+	var id pchannel.ID
+	copy(id[:blake2b224.Size224], hash[:])
+	return id
 }
 
 // Sign signs the given state with the given account.
