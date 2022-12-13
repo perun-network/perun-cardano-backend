@@ -58,7 +58,6 @@ func (a *Address) UnmarshalBinary(data []byte) error {
 	return nil
 }
 
-// TODO: This should probably return an address like `addr1vpu5vlrf4xkxv2qpwngf6cjhtw542ayty80v8dyr49rf5eg0yu80w`
 // String returns the public key as hex string.
 func (a Address) String() string {
 	return hex.EncodeToString(a.pubKey[:])
