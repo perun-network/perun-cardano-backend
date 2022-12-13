@@ -4,13 +4,15 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/btcsuite/btcutil/bech32"
-	"golang.org/x/crypto/blake2b"
 	"perun.network/go-perun/wallet"
+	"perun.network/perun-cardano-backend/blake2b224"
 )
 
 // PubKeyLength is the length of the public verification key part of a Cardano `ed25519` keypair in bytes.
 const PubKeyLength = 32
-const PubKeyHashLength = 28
+
+// PubKeyHashLength is the length of Cardano public key hashes using blake2b-224.
+const PubKeyHashLength = blake2b224.Size224
 
 // Address carries a public key that represents the public verification key part of a Cardano `ed25519` keypair
 type Address struct {
@@ -98,32 +100,7 @@ func (a Address) convertToAddress(networkIdentifierByte byte, networkIdentifierS
 
 // GetPubKeyHash returns the blake2b224-hash of the public key associated with this address.
 func (a Address) GetPubKeyHash() ([PubKeyHashLength]byte, error) {
-	// Get a blake2b-224 hash function instance.
-	blake2b224, err := blake2b.New(28, nil)
-	if err != nil {
-		return [PubKeyHashLength]byte{}, fmt.Errorf("unable to create blake2b-224 instance: %w", err)
-	}
-	// Compute the hash of the public key
-	n, err := blake2b224.Write(a.GetPubKeySlice())
-	if err != nil {
-		return [PubKeyHashLength]byte{}, fmt.Errorf("unable to compute blake2b224 hash of public key: %w", err)
-	}
-	if n != PubKeyLength {
-		return [PubKeyHashLength]byte{}, fmt.Errorf("did not write enough bytes. expected: %d, wrote: %d", PubKeyLength, n)
-	}
-	res := blake2b224.Sum(nil)
-	if len(res) != PubKeyHashLength {
-		return [PubKeyHashLength]byte{}, fmt.Errorf(
-			"hash does not have expected length. expected: %d, actual: %d",
-			PubKeyHashLength,
-			len(res),
-		)
-	}
-	ret := [PubKeyHashLength]byte{}
-
-	copy(ret[:], res)
-	// Read and return the hash.
-	return ret, nil
+	return blake2b224.Sum224(a.GetPubKeySlice())
 }
 
 // Equal returns true, iff the given address is of type Address and their public keys are equal.
