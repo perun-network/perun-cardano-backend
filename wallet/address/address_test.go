@@ -64,8 +64,8 @@ func TestAddress_Equal(t *testing.T) {
 	rng := pkgtest.Prng(t)
 	r := test.NewMockRemote(rng)
 	a := &r.MockAddress
-	b := &address.Address{PubKey: r.MockPubKeyBytes}
-	require.True(t, a.Equal(b), "addresses that have the same public key should be equal")
+	b := address.MakeAddressFromByteArray(r.MockPubKeyBytes)
+	require.True(t, a.Equal(&b), "addresses that have the same public key should be equal")
 	require.True(t, b.Equal(a), "address equality should be commutative")
 	require.False(
 		t,
