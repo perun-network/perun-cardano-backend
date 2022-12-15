@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/rand"
+	"perun.network/perun-cardano-backend/wallet"
 	"perun.network/perun-cardano-backend/wallet/address"
 	"perun.network/perun-cardano-backend/wire"
 )
@@ -34,18 +35,14 @@ type MockRemote struct {
 	MockMessage       []byte
 	MockMessageString string
 
-	callSign         func(wire.SigningRequest) (wire.SigningResponse, error)
-	callVerify       func(wire.VerificationRequest) (wire.VerificationResponse, error)
-	callKeyAvailable func(wire.KeyAvailabilityRequest) (wire.KeyAvailabilityResponse, error)
+	callEndpoint func(string, interface{}, interface{}) error
 }
 
 func NewMockRemote(rng *rand.Rand) *MockRemote {
 	r := &MockRemote{}
 	initializeRandomValues(r, rng)
 
-	r.callSign = makeCallSignDefault(r)
-	r.callVerify = makeCallVerifyDefault(r)
-	r.callKeyAvailable = makeCallKeyAvailableDefault(r)
+	r.callEndpoint = makeCallEndpointDefault(r)
 	return r
 }
 
@@ -54,7 +51,7 @@ func initializeRandomValues(r *MockRemote, rng *rand.Rand) {
 
 	r.MockAddress = MakeRandomAddress(rng)
 	r.MockPubKeyBytes = r.MockAddress.GetPubKey()
-
+	r.UnavailableAddress = MakeRandomAddress(rng)
 	for bytes.Equal(r.UnavailableAddress.GetPubKeySlice(), r.MockPubKeyBytes[:]) {
 		r.UnavailableAddress = MakeRandomAddress(rng)
 	}
@@ -83,75 +80,96 @@ func initializeRandomValues(r *MockRemote, rng *rand.Rand) {
 	r.MockMessageString = hex.EncodeToString(r.MockMessage)
 }
 
-func (m *MockRemote) SetCallSign(f func(request wire.SigningRequest) (wire.SigningResponse, error)) {
-	m.callSign = f
+func (m *MockRemote) SetCallEndpoint(f func(string, interface{}, interface{}) error) {
+	m.callEndpoint = f
 }
 
-func makeCallSignDefault(r *MockRemote) func(request wire.SigningRequest) (wire.SigningResponse, error) {
-	return func(request wire.SigningRequest) (wire.SigningResponse, error) {
-		reqAddr, err := request.PubKey.Decode()
-		if err != nil {
-			return wire.SigningResponse{}, fmt.Errorf("unable to decode PubKey from request")
-		}
-		if !reqAddr.Equal(&r.MockAddress) {
-			return wire.SigningResponse{}, fmt.Errorf("invalid public key for mock remote")
-		}
+func makeCallEndpointDefault(r *MockRemote) func(string, interface{}, interface{}) error {
+	return func(endpoint string, req interface{}, response interface{}) error {
+		switch endpoint {
+		case wallet.EndpointSignData:
+			request, ok := req.(wire.SigningRequest)
+			if !ok {
+				return fmt.Errorf("unable to cast request to SingingRequest")
+			}
+			resp, ok := response.(*wire.SigningResponse)
+			if !ok {
+				return fmt.Errorf("unable to cast response to SingingResponse")
+			}
+			reqAddr, err := request.PubKey.Decode()
+			if err != nil {
+				return fmt.Errorf("unable to decode PubKey from request")
+			}
+			if !reqAddr.Equal(&r.MockAddress) {
+				return fmt.Errorf("invalid public key for mock remote")
+			}
 
-		if request.Message != r.MockMessageString {
-			return wire.SigningResponse{}, fmt.Errorf("invalid data for mock remote")
+			if request.Message != r.MockMessageString {
+				return fmt.Errorf("invalid data for mock remote")
+			}
+			resp.Hex = r.MockSignatureString
+			return nil
+		case wallet.EndpointVerifyDataSignature:
+			request, ok := req.(wire.VerificationRequest)
+			if !ok {
+				return fmt.Errorf("unable to cast request to VerificationRequest")
+			}
+			resp, ok := response.(*wire.VerificationResponse)
+			if !ok {
+				return fmt.Errorf("unable to cast response to VerificationResponse")
+			}
+			reqAddr, err := request.PubKey.Decode()
+			if err != nil {
+				return fmt.Errorf("unable to decode PubKey from request")
+			}
+			if !reqAddr.Equal(&r.MockAddress) && !reqAddr.Equal(&r.UnavailableAddress) {
+				return fmt.Errorf("invalid public key for mock remote")
+			}
+			if reqAddr.Equal(&r.UnavailableAddress) {
+				*resp = false
+				return nil
+			}
+			if request.Message != r.MockMessageString {
+				return fmt.Errorf("invalid data for mock remote")
+			}
+			if request.Signature.Hex == r.MockSignatureString {
+				*resp = true
+				return nil
+			}
+			if request.Signature.Hex == r.OtherSignatureString {
+				*resp = false
+				return nil
+			}
+			if request.Signature.Hex == hex.EncodeToString(r.InvalidSignatureShorter) ||
+				request.Signature.Hex == hex.EncodeToString(r.InvalidSignatureLonger) {
+				panic("mock remote received signature of invalid length to verify")
+			}
+			return fmt.Errorf("invalid signature for mock remote")
+		case wallet.EndpointKeyAvailable:
+			request, ok := req.(wire.KeyAvailabilityRequest)
+			if !ok {
+				return fmt.Errorf("unable to cast request to KeyAvailabilityRequst")
+			}
+			resp, ok := response.(*wire.KeyAvailabilityResponse)
+			if !ok {
+				return fmt.Errorf("unable to cast response to KeyAvailabilityResponse")
+			}
+			reqAddr, err := request.Decode()
+			if err != nil {
+				return fmt.Errorf("unable to decode address from request: %w", err)
+			}
+			*resp = wire.KeyAvailabilityResponse(reqAddr.Equal(&r.MockAddress))
+			return nil
+		case wallet.EndpointSignChannelState:
+			panic("implement me")
+		case wallet.EndpointVerifyChannelStateSignature:
+			panic("implement me")
+		default:
+			return fmt.Errorf("unable to recognize endpoint: %s", endpoint)
+
 		}
-		return wire.Signature{Hex: r.MockSignatureString}, nil
 	}
 }
-
-func makeCallVerifyDefault(r *MockRemote) func(wire.VerificationRequest) (wire.VerificationResponse, error) {
-	return func(request wire.VerificationRequest) (wire.VerificationResponse, error) {
-		reqAddr, err := request.PubKey.Decode()
-		if err != nil {
-			return false, fmt.Errorf("unable to decode PubKey from request")
-		}
-		if !reqAddr.Equal(&r.MockAddress) && !reqAddr.Equal(&r.UnavailableAddress) {
-			return false, fmt.Errorf("invalid public key for mock remote")
-		}
-		if reqAddr.Equal(&r.UnavailableAddress) {
-			return false, nil
-		}
-
-		if request.Message != r.MockMessageString {
-			return false, fmt.Errorf("invalid data for mock remote")
-		}
-		if request.Signature.Hex == r.MockSignatureString {
-			return true, nil
-		}
-		if request.Signature.Hex == r.OtherSignatureString {
-			return false, nil
-		}
-		if request.Signature.Hex == hex.EncodeToString(r.InvalidSignatureShorter) ||
-			request.Signature.Hex == hex.EncodeToString(r.InvalidSignatureLonger) {
-			panic("mock remote received signature of invalid length to verify")
-		}
-		return false, fmt.Errorf("invalid signature for mock remote")
-	}
-}
-
-func makeCallKeyAvailableDefault(r *MockRemote) func(wire.KeyAvailabilityRequest) (wire.KeyAvailabilityResponse, error) {
-	return func(request wire.KeyAvailabilityRequest) (wire.KeyAvailabilityResponse, error) {
-		reqAddr, err := request.Decode()
-		if err != nil {
-			return false, fmt.Errorf("unable to decode address from request: %w", err)
-		}
-		return reqAddr.Equal(&r.MockAddress), nil
-	}
-}
-
-func (m *MockRemote) CallSign(request wire.SigningRequest) (wire.SigningResponse, error) {
-	return m.callSign(request)
-}
-
-func (m *MockRemote) CallVerify(request wire.VerificationRequest) (wire.VerificationResponse, error) {
-	return m.callVerify(request)
-}
-
-func (m *MockRemote) CallKeyAvailable(request wire.KeyAvailabilityRequest) (wire.KeyAvailabilityResponse, error) {
-	return m.callKeyAvailable(request)
+func (m *MockRemote) CallEndpoint(endpoint string, request interface{}, response interface{}) error {
+	return m.callEndpoint(endpoint, request, response)
 }

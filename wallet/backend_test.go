@@ -2,7 +2,6 @@ package wallet_test
 
 import (
 	"bytes"
-	"fmt"
 	"github.com/stretchr/testify/require"
 	"io"
 	"perun.network/perun-cardano-backend/wallet"
@@ -55,7 +54,6 @@ func TestBackend_DecodeSig(t *testing.T) {
 	)
 
 	invalidReader := bytes.NewReader(r.InvalidSignatureShorter)
-	fmt.Println(len(r.InvalidSignatureShorter))
 	_, err = uut.DecodeSig(invalidReader)
 	require.Errorf(
 		t,
