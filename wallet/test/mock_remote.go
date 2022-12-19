@@ -5,6 +5,8 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/rand"
+	"perun.network/perun-cardano-backend/channel/test"
+	"perun.network/perun-cardano-backend/channel/types"
 	"perun.network/perun-cardano-backend/wallet"
 	"perun.network/perun-cardano-backend/wallet/address"
 	"perun.network/perun-cardano-backend/wire"
@@ -34,6 +36,8 @@ type MockRemote struct {
 
 	MockMessage       []byte
 	MockMessageString string
+
+	MockChannelState types.ChannelState
 
 	callEndpoint func(string, interface{}, interface{}) error
 }
@@ -78,6 +82,8 @@ func initializeRandomValues(r *MockRemote, rng *rand.Rand) {
 
 	r.MockMessage = GetRandomByteSlice(0, maxMessageLength, rng)
 	r.MockMessageString = hex.EncodeToString(r.MockMessage)
+
+	r.MockChannelState = test.MakeRandomChannelState(rng)
 }
 
 func (m *MockRemote) SetCallEndpoint(f func(string, interface{}, interface{}) error) {
@@ -85,16 +91,16 @@ func (m *MockRemote) SetCallEndpoint(f func(string, interface{}, interface{}) er
 }
 
 func makeCallEndpointDefault(r *MockRemote) func(string, interface{}, interface{}) error {
-	return func(endpoint string, req interface{}, response interface{}) error {
+	return func(endpoint string, req interface{}, resp interface{}) error {
 		switch endpoint {
 		case wallet.EndpointSignData:
 			request, ok := req.(wire.SigningRequest)
 			if !ok {
 				return fmt.Errorf("unable to cast request to SingingRequest")
 			}
-			resp, ok := response.(*wire.SigningResponse)
+			response, ok := resp.(*wire.SigningResponse)
 			if !ok {
-				return fmt.Errorf("unable to cast response to SingingResponse")
+				return fmt.Errorf("unable to cast resp to SingingResponse")
 			}
 			reqAddr, err := request.PubKey.Decode()
 			if err != nil {
@@ -107,16 +113,16 @@ func makeCallEndpointDefault(r *MockRemote) func(string, interface{}, interface{
 			if request.Message != r.MockMessageString {
 				return fmt.Errorf("invalid data for mock remote")
 			}
-			resp.Hex = r.MockSignatureString
+			response.Hex = r.MockSignatureString
 			return nil
 		case wallet.EndpointVerifyDataSignature:
 			request, ok := req.(wire.VerificationRequest)
 			if !ok {
 				return fmt.Errorf("unable to cast request to VerificationRequest")
 			}
-			resp, ok := response.(*wire.VerificationResponse)
+			response, ok := resp.(*wire.VerificationResponse)
 			if !ok {
-				return fmt.Errorf("unable to cast response to VerificationResponse")
+				return fmt.Errorf("unable to cast resp to VerificationResponse")
 			}
 			reqAddr, err := request.PubKey.Decode()
 			if err != nil {
@@ -126,18 +132,18 @@ func makeCallEndpointDefault(r *MockRemote) func(string, interface{}, interface{
 				return fmt.Errorf("invalid public key for mock remote")
 			}
 			if reqAddr.Equal(&r.UnavailableAddress) {
-				*resp = false
+				*response = false
 				return nil
 			}
 			if request.Message != r.MockMessageString {
 				return fmt.Errorf("invalid data for mock remote")
 			}
 			if request.Signature.Hex == r.MockSignatureString {
-				*resp = true
+				*response = true
 				return nil
 			}
 			if request.Signature.Hex == r.OtherSignatureString {
-				*resp = false
+				*response = false
 				return nil
 			}
 			if request.Signature.Hex == hex.EncodeToString(r.InvalidSignatureShorter) ||
@@ -150,20 +156,73 @@ func makeCallEndpointDefault(r *MockRemote) func(string, interface{}, interface{
 			if !ok {
 				return fmt.Errorf("unable to cast request to KeyAvailabilityRequst")
 			}
-			resp, ok := response.(*wire.KeyAvailabilityResponse)
+			response, ok := resp.(*wire.KeyAvailabilityResponse)
 			if !ok {
-				return fmt.Errorf("unable to cast response to KeyAvailabilityResponse")
+				return fmt.Errorf("unable to cast resp to KeyAvailabilityResponse")
 			}
 			reqAddr, err := request.Decode()
 			if err != nil {
 				return fmt.Errorf("unable to decode address from request: %w", err)
 			}
-			*resp = wire.KeyAvailabilityResponse(reqAddr.Equal(&r.MockAddress))
+			*response = reqAddr.Equal(&r.MockAddress)
 			return nil
 		case wallet.EndpointSignChannelState:
-			panic("implement me")
+			request, ok := req.(wire.ChannelStateSigningRequest)
+			if !ok {
+				return fmt.Errorf("unable to cast request to ChannelStateSigningRequest")
+			}
+			response, ok := resp.(*wire.SigningResponse)
+			if !ok {
+				return fmt.Errorf("unable to cast resp to SingingResponse")
+			}
+			reqAddr, err := request.PubKey.Decode()
+			if err != nil {
+				return fmt.Errorf("unable to decode PubKey from request")
+			}
+			if !reqAddr.Equal(&r.MockAddress) {
+				return fmt.Errorf("invalid public key for mock remote")
+			}
+			if !request.ChannelState.Decode().Equal(r.MockChannelState) {
+				return fmt.Errorf("invalid channel state for mock remote")
+			}
+			response.Hex = r.MockSignatureString
+			return nil
 		case wallet.EndpointVerifyChannelStateSignature:
-			panic("implement me")
+			request, ok := req.(wire.ChannelStateVerificationRequest)
+			if !ok {
+				return fmt.Errorf("unable to cast request to ChannelStateVerificationRequest")
+			}
+			response, ok := resp.(*wire.VerificationResponse)
+			if !ok {
+				return fmt.Errorf("unable to cast resp to VerificationResponse")
+			}
+			reqAddr, err := request.PubKey.Decode()
+			if err != nil {
+				return fmt.Errorf("unable to decode PubKey from request")
+			}
+			if !reqAddr.Equal(&r.MockAddress) && !reqAddr.Equal(&r.UnavailableAddress) {
+				return fmt.Errorf("invalid public key for mock remote")
+			}
+			if reqAddr.Equal(&r.UnavailableAddress) {
+				*response = false
+				return nil
+			}
+			if !request.ChannelState.Decode().Equal(r.MockChannelState) {
+				return fmt.Errorf("invalid data for mock remote")
+			}
+			if request.Signature.Hex == r.MockSignatureString {
+				*response = true
+				return nil
+			}
+			if request.Signature.Hex == r.OtherSignatureString {
+				*response = false
+				return nil
+			}
+			if request.Signature.Hex == hex.EncodeToString(r.InvalidSignatureShorter) ||
+				request.Signature.Hex == hex.EncodeToString(r.InvalidSignatureLonger) {
+				panic("mock remote received signature of invalid length to verify")
+			}
+			return fmt.Errorf("invalid signature for mock remote")
 		default:
 			return fmt.Errorf("unable to recognize endpoint: %s", endpoint)
 
