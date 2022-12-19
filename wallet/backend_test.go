@@ -91,3 +91,32 @@ func TestBackend_VerifySignature(t *testing.T) {
 		len(r.InvalidSignatureLonger),
 	)
 }
+
+func TestRemoteBackend_VerifyChannelStateSignature(t *testing.T) {
+	rng := pkgtest.Prng(t)
+	r := test.NewMockRemote(rng)
+	uut := wallet.MakeRemoteBackend(r)
+	valid, err := uut.VerifyChannelStateSignature(r.MockChannelState, r.MockSignature, &r.MockAddress)
+	require.NoError(t, err, "received error when verifying a valid signature")
+	require.True(t, valid, "did not verify a valid signature as valid")
+
+	valid, err = uut.VerifyChannelStateSignature(r.MockChannelState, r.OtherSignature, &r.MockAddress)
+	require.NoError(t, err, "received an error when verifying an invalid signature")
+	require.False(t, valid, "verified an invalid signature as valid")
+
+	_, err = uut.VerifyChannelStateSignature(r.MockChannelState, r.InvalidSignatureShorter, &r.MockAddress)
+	require.Errorf(
+		t,
+		err,
+		"failed to error when verifying signature of invalid length: %d",
+		len(r.InvalidSignatureShorter),
+	)
+
+	_, err = uut.VerifyChannelStateSignature(r.MockChannelState, r.InvalidSignatureLonger, &r.MockAddress)
+	require.Errorf(
+		t,
+		err,
+		"failed to error when verifying signature of invalid length: %d",
+		len(r.InvalidSignatureLonger),
+	)
+}
