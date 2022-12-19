@@ -5,12 +5,23 @@ import (
 	pchannel "perun.network/go-perun/channel"
 	"perun.network/go-perun/wallet"
 	"perun.network/perun-cardano-backend/blake2b224"
+	"perun.network/perun-cardano-backend/channel/types"
+	remotewallet "perun.network/perun-cardano-backend/wallet"
 )
 
 // backend implements the backend interface
 // The type is private since it only needs to be exposed as singleton by the
 // `Backend` variable.
-type backend struct{}
+// The current version of backend needs to use our wallet.RemoteBackend implementation.
+// This is a workaround that makes encoding state for signing and verifying possible.
+type backend struct {
+	walletBackend *remotewallet.RemoteBackend
+}
+
+// SetWalletBackend needs to be called initially.
+func SetWalletBackend(remoteBackend *remotewallet.RemoteBackend) {
+	Backend = backend{walletBackend: remoteBackend}
+}
 
 // CalcID calculates the channel-id from the parameters.
 func (b backend) CalcID(params *pchannel.Params) pchannel.ID {
@@ -30,32 +41,32 @@ func (b backend) CalcID(params *pchannel.Params) pchannel.ID {
 
 // Sign signs the given state with the given account.
 func (b backend) Sign(account wallet.Account, state *pchannel.State) (wallet.Sig, error) {
-	encodedState, err := EncodeState(state)
-	if err != nil {
-		return nil, fmt.Errorf("unable to encode state for signing: %w", err)
+	remoteAccount, ok := account.(*remotewallet.RemoteAccount)
+	if !ok {
+		return nil, fmt.Errorf("unable to cast Account to RemoteAccount")
 	}
-	return account.SignData(encodedState)
+
+	channelState, err := types.ConvertChannelState(*state)
+	if err != nil {
+		return nil, fmt.Errorf("unable to convert state for signing: %w", err)
+	}
+
+	return remoteAccount.SignChannelState(channelState)
 }
 
 // Verify returns true, iff the signature is correct for the given state and address.
 func (b backend) Verify(addr wallet.Address, state *pchannel.State, sig wallet.Sig) (bool, error) {
-	encodedState, err := EncodeState(state)
+	channelState, err := types.ConvertChannelState(*state)
 	if err != nil {
 		return false, fmt.Errorf("unable to encode state for verifying: %w", err)
 	}
-	return wallet.VerifySignature(encodedState, sig, addr)
+	return Backend.walletBackend.VerifyChannelStateSignature(channelState, sig, addr)
 }
 
 // NewAsset returns a variable of type Asset, which can be used for unmarshalling an asset from its binary
 // representation.
 func (b backend) NewAsset() pchannel.Asset {
 	return Asset
-}
-
-// EncodeState is a placeholder for state encoding.
-func EncodeState(state *pchannel.State) ([]byte, error) {
-	//TODO implement me
-	panic("implement me")
 }
 
 // EncodeParams placeholder for parameter encoding.
