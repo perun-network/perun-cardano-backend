@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"perun.network/go-perun/wallet"
+	"perun.network/perun-cardano-backend/channel/types"
 	"perun.network/perun-cardano-backend/wallet/address"
 	"perun.network/perun-cardano-backend/wire"
 )
@@ -57,7 +58,7 @@ func (b RemoteBackend) VerifySignature(msg []byte, sig wallet.Sig, a wallet.Addr
 
 // VerifyChannelStateSignature returns true, iff the given signature is valid for the given ChannelState under the
 // public key associated with the given address.
-func (b RemoteBackend) VerifyChannelStateSignature(state wire.ChannelState, sig wallet.Sig, a wallet.Address) (bool, error) {
+func (b RemoteBackend) VerifyChannelStateSignature(state types.ChannelState, sig wallet.Sig, a wallet.Address) (bool, error) {
 	addr, ok := a.(*address.Address)
 	if !ok {
 		return false, fmt.Errorf("invalid PubKey for signature verification")
@@ -69,7 +70,7 @@ func (b RemoteBackend) VerifyChannelStateSignature(state wire.ChannelState, sig 
 			len(sig),
 		)
 	}
-	request := wire.MakeChannelStateVerificationRequest(sig, *addr, state)
+	request := wire.MakeChannelStateVerificationRequest(sig, *addr, wire.MakeChannelState(state))
 	var response wire.VerificationResponse
 	err := b.walletServer.CallEndpoint(EndpointVerifyChannelStateSignature, request, &response)
 	if err != nil {

@@ -3,6 +3,7 @@ package wallet
 import (
 	"fmt"
 	"perun.network/go-perun/wallet"
+	"perun.network/perun-cardano-backend/channel/types"
 	"perun.network/perun-cardano-backend/wallet/address"
 	"perun.network/perun-cardano-backend/wire"
 )
@@ -43,8 +44,8 @@ func (a RemoteAccount) SignData(data []byte) (wallet.Sig, error) {
 }
 
 // SignChannelState signs the given channel state with this account.
-func (a RemoteAccount) SignChannelState(channelState wire.ChannelState) (wallet.Sig, error) {
-	request := wire.MakeChannelStateSigningRequest(a.AccountAddress, channelState)
+func (a RemoteAccount) SignChannelState(channelState types.ChannelState) (wallet.Sig, error) {
+	request := wire.MakeChannelStateSigningRequest(a.AccountAddress, wire.MakeChannelState(channelState))
 	var response wire.SigningResponse
 	err := a.walletServer.CallEndpoint(EndpointSignChannelState, request, &response)
 	if err != nil {
