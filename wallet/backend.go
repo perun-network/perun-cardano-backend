@@ -70,7 +70,7 @@ func (b RemoteBackend) VerifyChannelStateSignature(state types.ChannelState, sig
 			len(sig),
 		)
 	}
-	request := wire.MakeChannelStateVerificationRequest(sig, *addr, wire.MakeChannelState(state))
+	request := wire.MakeChannelStateVerificationRequest(sig, *addr, state)
 	var response wire.VerificationResponse
 	err := b.walletServer.CallEndpoint(EndpointVerifyChannelStateSignature, request, &response)
 	if err != nil {
