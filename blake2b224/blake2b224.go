@@ -19,6 +19,13 @@ func Sum224(data []byte) ([Size224]byte, error) {
 		return [Size224]byte{}, fmt.Errorf("unable to compute blake2b224 hash of data: %w", err)
 	}
 	var res [Size224]byte
-	copy(res[:], blake2b224.Sum(nil))
+	n := copy(res[:], blake2b224.Sum(nil))
+	if n != Size224 {
+		return res, fmt.Errorf(
+			"resulting blake2b224 hash has wrong length. expected: %d bytes, actual: %d bytes",
+			Size224,
+			n,
+		)
+	}
 	return res, nil
 }
