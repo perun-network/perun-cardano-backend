@@ -3,11 +3,19 @@ package address
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/btcsuite/btcutil/bech32"
 	"perun.network/go-perun/wallet"
+	"perun.network/perun-cardano-backend/blake2b224"
 )
 
 // PubKeyLength is the length of the public verification key part of a Cardano `ed25519` keypair in bytes.
 const PubKeyLength = 32
+
+// PubKeyHashLength is the length of Cardano public key hashes using blake2b-224.
+const PubKeyHashLength = blake2b224.Size224
+
+const MainnetIdentifier = "addr"
+const TestnetIdentifier = "addr_test"
 
 // Address carries a public key that represents the public verification key part of a Cardano `ed25519` keypair
 type Address struct {
@@ -55,10 +63,45 @@ func (a *Address) UnmarshalBinary(data []byte) error {
 	return nil
 }
 
-// TODO: This should probably return an address like `addr1vpu5vlrf4xkxv2qpwngf6cjhtw542ayty80v8dyr49rf5eg0yu80w`
 // String returns the public key as hex string.
 func (a Address) String() string {
 	return hex.EncodeToString(a.pubKey[:])
+}
+
+// GetTestnetAddress returns the testnet address string representation of this Address (i.e. `addr_test1...`).
+func (a Address) GetTestnetAddress() (string, error) {
+	const testnetIdentifierByte byte = 0x60
+	return a.convertToAddress(testnetIdentifierByte, TestnetIdentifier)
+}
+
+// GetMainnetAddress returns the mainnet address string representation of this Address (i.e. `addr1...`).
+func (a Address) GetMainnetAddress() (string, error) {
+	const mainnetIdentifierByte byte = 0x61
+	return a.convertToAddress(mainnetIdentifierByte, MainnetIdentifier)
+}
+
+// convertToAddress returns the address string for given network parameters.
+func (a Address) convertToAddress(networkIdentifierByte byte, networkIdentifierString string) (string, error) {
+	pubKeyHash, err := a.GetPubKeyHash()
+	if err != nil {
+		return "", fmt.Errorf("unable to compute PubKeyHash: %w", err)
+	}
+
+	// Bech32-encode the PubKeyHash.
+	conv, err := bech32.ConvertBits(append([]byte{networkIdentifierByte}, pubKeyHash[:]...), 8, 5, true)
+	if err != nil {
+		return "", fmt.Errorf("unable to convert bits for bech32 encoding: %w", err)
+	}
+	encodedHash, err := bech32.Encode(networkIdentifierString, conv)
+	if err != nil {
+		return "", fmt.Errorf("unable bech32-encode: %w", err)
+	}
+	return encodedHash, nil
+}
+
+// GetPubKeyHash returns the blake2b224-hash of the public key associated with this address.
+func (a Address) GetPubKeyHash() ([PubKeyHashLength]byte, error) {
+	return blake2b224.Sum224(a.GetPubKeySlice())
 }
 
 // Equal returns true, iff the given address is of type Address and their public keys are equal.

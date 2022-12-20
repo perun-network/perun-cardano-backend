@@ -100,3 +100,41 @@ func TestAddress_Equal(t *testing.T) {
 		"addresses should not be equal to address of different type",
 	)
 }
+
+func TestAddress_GetTestnetAddress(t *testing.T) {
+	const testPubKeyString = "eb94e8236e2099357fa499bfbc415968691573f25ec77435b7949f5fdfaa5da0"
+	const expected = "addr_test1vru2drx33ev6dt8gfq245r5k0tmy7ngqe79va69de9dxkrg09c7d3"
+	addrBytes, err := hex.DecodeString(testPubKeyString)
+	require.NoErrorf(t, err, "this should not fail!")
+	addr, err := address.MakeAddressFromByteSlice(addrBytes)
+	require.NoErrorf(t, err, "unable to create address from byte slice")
+	actual, err := addr.GetTestnetAddress()
+	require.NoErrorf(t, err, "unexpected error when deriving address string from address")
+	require.Equal(t, expected, actual, "address string is not as expected")
+}
+
+func TestAddress_GetMainnetAddress(t *testing.T) {
+	const testPubKeyString = "eb94e8236e2099357fa499bfbc415968691573f25ec77435b7949f5fdfaa5da0"
+	const expected = "addr1v8u2drx33ev6dt8gfq245r5k0tmy7ngqe79va69de9dxkrg5dvzz5"
+	addrBytes, err := hex.DecodeString(testPubKeyString)
+	require.NoErrorf(t, err, "this should not fail!")
+	addr, err := address.MakeAddressFromByteSlice(addrBytes)
+	require.NoErrorf(t, err, "unable to create address from byte slice")
+	actual, err := addr.GetMainnetAddress()
+	require.NoErrorf(t, err, "unexpected error when deriving address string from address")
+	require.Equal(t, expected, actual, "address string is not as expected")
+}
+
+func TestAddress_GetPubKeyHash(t *testing.T) {
+	const testPubKeyString = "eb94e8236e2099357fa499bfbc415968691573f25ec77435b7949f5fdfaa5da0"
+	const expectedPubKeyHashString = "f8a68cd18e59a6ace848155a0e967af64f4d00cf8acee8adc95a6b0d"
+	expected, err := hex.DecodeString(expectedPubKeyHashString)
+	require.NoErrorf(t, err, "this should not fail!")
+	addrBytes, err := hex.DecodeString(testPubKeyString)
+	require.NoErrorf(t, err, "this should not fail!")
+	addr, err := address.MakeAddressFromByteSlice(addrBytes)
+	require.NoErrorf(t, err, "unable to create address from byte slice")
+	actual, err := addr.GetPubKeyHash()
+	require.NoErrorf(t, err, "unexpected error when deriving PubKeyHash from address")
+	require.Equal(t, expected, actual[:], "PubKeyHash is not as expected")
+}
