@@ -28,7 +28,7 @@ func MakeAddressFromByteSlice(pubKey []byte) (Address, error) {
 	return addr, err
 }
 
-// GetPubKey returns the public key of this address
+// GetPubKey returns the public key of this address.
 func (a Address) GetPubKey() [PubKeyLength]byte {
 	return a.pubKey
 }

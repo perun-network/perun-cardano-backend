@@ -35,7 +35,7 @@ func (w *RemoteWallet) DecrementUsage(address wallet.Address) {
 func (w *RemoteWallet) Unlock(addr wallet.Address) (wallet.Account, error) {
 	rwAddress, ok := addr.(*address.Address)
 	if !ok {
-		return nil, fmt.Errorf("invalid address for signature verification (expected type PubKey)")
+		return nil, fmt.Errorf("invalid address for signature verification (expected type Address)")
 	}
 
 	available, err := w.walletServer.CallKeyAvailable(wire.MakeKeyAvailabilityRequest(*rwAddress))

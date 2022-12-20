@@ -20,7 +20,7 @@ func TestBackend_NewAddress(t *testing.T) {
 	uut := wallet.MakeRemoteBackend(r)
 	actualAddress := uut.NewAddress()
 	_, ok := actualAddress.(*address.Address)
-	require.True(t, ok, "NewAddress() does not return an PubKey")
+	require.True(t, ok, "NewAddress() does not return an Address")
 }
 
 func TestBackend_DecodeSig(t *testing.T) {
