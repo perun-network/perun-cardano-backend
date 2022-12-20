@@ -18,8 +18,8 @@ func MakePubKey(address address.Address) PubKey {
 	}
 }
 
-func (p PubKey) Decode() (address.Address, error) {
-	pubKey, err := hex.DecodeString(p.Hex)
+func (key PubKey) Decode() (address.Address, error) {
+	pubKey, err := hex.DecodeString(key.Hex)
 	if err != nil {
 		return address.Address{}, fmt.Errorf("unable to decode PubKey hex string: %w", err)
 	}

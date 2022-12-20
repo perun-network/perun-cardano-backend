@@ -37,12 +37,12 @@ func (w *RemoteWallet) Unlock(addr wallet.Address) (wallet.Account, error) {
 	if !ok {
 		return nil, fmt.Errorf("invalid address for signature verification (expected type Address)")
 	}
-
-	available, err := w.walletServer.CallKeyAvailable(wire.MakeKeyAvailabilityRequest(*rwAddress))
+	var response wire.KeyAvailabilityResponse
+	err := w.walletServer.CallEndpoint(EndpointKeyAvailable, wire.MakeKeyAvailabilityRequest(*rwAddress), &response)
 	if err != nil {
 		return nil, fmt.Errorf("wallet server could not assert key availability: %w", err)
 	}
-	if !available {
+	if !response {
 		return nil, fmt.Errorf("wallet server has no private key for address %s", rwAddress)
 	}
 	return MakeRemoteAccount(*rwAddress, w.walletServer), nil

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"perun.network/go-perun/wallet"
+	"perun.network/perun-cardano-backend/channel/types"
 	"perun.network/perun-cardano-backend/wallet/address"
 	"perun.network/perun-cardano-backend/wire"
 )
@@ -47,11 +48,35 @@ func (b RemoteBackend) VerifySignature(msg []byte, sig wallet.Sig, a wallet.Addr
 		)
 	}
 	request := wire.MakeVerificationRequest(sig, *addr, msg)
-	verificationResponse, err := b.walletServer.CallVerify(request)
+	var response wire.VerificationResponse
+	err := b.walletServer.CallEndpoint(EndpointVerifyDataSignature, request, &response)
 	if err != nil {
 		return false, fmt.Errorf("wallet server could not verify message: %w", err)
 	}
-	return verificationResponse, nil
+	return response, nil
+}
+
+// VerifyChannelStateSignature returns true, iff the given signature is valid for the given ChannelState under the
+// public key associated with the given address.
+func (b RemoteBackend) VerifyChannelStateSignature(state types.ChannelState, sig wallet.Sig, a wallet.Address) (bool, error) {
+	addr, ok := a.(*address.Address)
+	if !ok {
+		return false, fmt.Errorf("invalid PubKey for signature verification")
+	}
+	if len(sig) != wire.SignatureLength {
+		return false, fmt.Errorf(
+			"signature has incorrect length. expected: %d bytes actual: %d bytes",
+			wire.SignatureLength,
+			len(sig),
+		)
+	}
+	request := wire.MakeChannelStateVerificationRequest(sig, *addr, state)
+	var response wire.VerificationResponse
+	err := b.walletServer.CallEndpoint(EndpointVerifyChannelStateSignature, request, &response)
+	if err != nil {
+		return false, fmt.Errorf("wallet server could not verify message: %w", err)
+	}
+	return response, nil
 }
 
 var _ wallet.Backend = RemoteBackend{}

@@ -24,3 +24,12 @@ func TestRemoteAccount_SignData(t *testing.T) {
 	require.NoError(t, err, "unable to sign valid data for valid address")
 	require.Equal(t, r.MockSignature, actualSignature, "signature is wrong")
 }
+
+func TestRemoteAccount_SignChannelState(t *testing.T) {
+	rng := pkgtest.Prng(t)
+	r := test.NewMockRemote(rng)
+	uut := wallet.MakeRemoteAccount(r.MockAddress, r)
+	actualSignature, err := uut.SignChannelState(r.MockChannelState)
+	require.NoError(t, err, "unable to sign valid channel state")
+	require.Equal(t, r.MockSignature, actualSignature, "signature is wrong")
+}

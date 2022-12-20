@@ -6,18 +6,18 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"perun.network/perun-cardano-backend/wire"
 )
+
+const EndpointSignData = "/sign"
+const EndpointSignChannelState = "/signChannelState"
+const EndpointVerifyDataSignature = "/verify"
+const EndpointVerifyChannelStateSignature = "/verifyChannelState"
+const EndpointKeyAvailable = "/keyAvailable"
 
 // Remote is an interface, which instances are used to communicate with the perun-cardano-wallet server.
 type Remote interface {
-	// CallSign is the endpoint for signing data with the perun-cardano-wallet.
-	CallSign(wire.SigningRequest) (wire.SigningResponse, error)
-	// CallVerify is the endpoint for verifying signatures with the perun-cardano-wallet.
-	CallVerify(wire.VerificationRequest) (wire.VerificationResponse, error)
-	// CallKeyAvailable is the endpoint for verifying that the connected perun-cardano-wallet has the private key to
-	// a given Address.
-	CallKeyAvailable(request wire.KeyAvailabilityRequest) (wire.KeyAvailabilityResponse, error)
+	// CallEndpoint calls the given endpoint with the given body, writing the result to the given result.
+	CallEndpoint(endpoint string, body interface{}, result interface{}) error
 }
 
 // PerunCardanoWallet is a basic implementation Remote implementation that calls perun-cardano-wallet via http.
@@ -25,64 +25,26 @@ type PerunCardanoWallet struct {
 	serverAddress string
 }
 
+// NewPerunCardanoWallet returns a new PerunCardanoWallet with the given server address.
 func NewPerunCardanoWallet(addr string) *PerunCardanoWallet {
 	return &PerunCardanoWallet{serverAddress: addr}
 }
 
-// CallSign computes a Signature for the given SigningRequest via the perun-cardano-wallet server.
-func (r *PerunCardanoWallet) CallSign(body wire.SigningRequest) (wire.SigningResponse, error) {
-	const signEndpoint = "/sign"
+// CallEndpoint calls the given endpoint on the remote wallet and decodes the json response into the given result.
+// `result` must be a pointer.
+func (r *PerunCardanoWallet) CallEndpoint(endpoint string, body interface{}, result interface{}) error {
 	jsonBody, err := json.Marshal(body)
 	if err != nil {
-		return wire.SigningResponse{}, fmt.Errorf("unable to marshal json for signing request body: %w", err)
+		return fmt.Errorf("unable to marshal json body: %w", err)
 	}
-	jsonResponse, err := r.callEndpoint(jsonBody, signEndpoint)
+	jsonResponse, err := r.callEndpoint(jsonBody, endpoint)
 	if err != nil {
-		return wire.SigningResponse{}, fmt.Errorf("failed to call endpoint: %w", err)
+		return fmt.Errorf("failed to call endpoint: %w", err)
 	}
-	var result wire.SigningResponse
-	if err = json.Unmarshal(jsonResponse, &result); err != nil {
-		return wire.SigningResponse{}, fmt.Errorf("failed to unmarshal wallet server response for singing: %w", err)
+	if err = json.Unmarshal(jsonResponse, result); err != nil {
+		return fmt.Errorf("failed to unmarshal wallet server response: %w", err)
 	}
-	return result, nil
-}
-
-// CallVerify verifies the (message, signature, public key) tuple in the given VerificationRequest via the
-// perun-cardano-wallet server.
-func (r *PerunCardanoWallet) CallVerify(body wire.VerificationRequest) (wire.VerificationResponse, error) {
-	const verifyEndpoint = "/verify"
-	jsonBody, err := json.Marshal(body)
-	if err != nil {
-		return false, fmt.Errorf("unable to marshal json for verification request body: %w", err)
-	}
-	jsonResponse, err := r.callEndpoint(jsonBody, verifyEndpoint)
-	if err != nil {
-		return false, fmt.Errorf("failed to call endpoint: %w", err)
-	}
-	var result wire.VerificationResponse
-	if err = json.Unmarshal(jsonResponse, &result); err != nil {
-		return false, fmt.Errorf("failed to unmarshal wallet server response for verification: %w", err)
-	}
-	return result, nil
-}
-
-// CallKeyAvailable queries whether the connected perun-cardano-wallet server has the private key for the public key
-// given in the KeyAvailabilityRequest.
-func (r *PerunCardanoWallet) CallKeyAvailable(body wire.KeyAvailabilityRequest) (wire.KeyAvailabilityResponse, error) {
-	const keyAvailableEndpoint = "/keyAvailable"
-	jsonBody, err := json.Marshal(body)
-	if err != nil {
-		return false, fmt.Errorf("unable to marshal json for key availaility request body: %w", err)
-	}
-	jsonResponse, err := r.callEndpoint(jsonBody, keyAvailableEndpoint)
-	if err != nil {
-		return false, fmt.Errorf("failed to call endpoint: %w", err)
-	}
-	var result wire.KeyAvailabilityResponse
-	if err = json.Unmarshal(jsonResponse, &result); err != nil {
-		return false, fmt.Errorf("failed to unmarshal wallet server response for key availability %w", err)
-	}
-	return result, nil
+	return nil
 }
 
 // callEndpoint issues a request to the given endpoint with the given body.
