@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"perun.network/go-perun/wallet"
+	"perun.network/perun-cardano-backend/channel/types"
 	"perun.network/perun-cardano-backend/wallet/address"
 )
 
@@ -31,10 +32,10 @@ type ChannelStateSigningRequest struct {
 }
 
 // MakeChannelStateSigningRequest returns a new ChannelStateSigningRequest.
-func MakeChannelStateSigningRequest(address address.Address, channelState ChannelState) ChannelStateSigningRequest {
+func MakeChannelStateSigningRequest(address address.Address, channelState types.ChannelState) ChannelStateSigningRequest {
 	return ChannelStateSigningRequest{
 		PubKey:       MakePubKey(address),
-		ChannelState: channelState,
+		ChannelState: MakeChannelState(channelState),
 	}
 }
 
@@ -63,11 +64,11 @@ type ChannelStateVerificationRequest struct {
 }
 
 // MakeChannelStateVerificationRequest returns a new ChannelStateVerificationRequest.
-func MakeChannelStateVerificationRequest(sig wallet.Sig, address address.Address, channelState ChannelState) ChannelStateVerificationRequest {
+func MakeChannelStateVerificationRequest(sig wallet.Sig, address address.Address, channelState types.ChannelState) ChannelStateVerificationRequest {
 	return ChannelStateVerificationRequest{
 		Signature:    MakeSignature(sig),
 		PubKey:       MakePubKey(address),
-		ChannelState: channelState,
+		ChannelState: MakeChannelState(channelState),
 	}
 }
 
