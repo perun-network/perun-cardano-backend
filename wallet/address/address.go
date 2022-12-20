@@ -14,6 +14,9 @@ const PubKeyLength = 32
 // PubKeyHashLength is the length of Cardano public key hashes using blake2b-224.
 const PubKeyHashLength = blake2b224.Size224
 
+const MainnetIdentifier = "addr"
+const TestnetIdentifier = "addr_test"
+
 // Address carries a public key that represents the public verification key part of a Cardano `ed25519` keypair
 type Address struct {
 	pubKey [PubKeyLength]byte
@@ -68,15 +71,13 @@ func (a Address) String() string {
 // GetTestnetAddress returns the testnet address string representation of this Address (i.e. `addr_test1...`).
 func (a Address) GetTestnetAddress() (string, error) {
 	const testnetIdentifierByte byte = 0x60
-	const testnetIdentifierString = "addr_test"
-	return a.convertToAddress(testnetIdentifierByte, testnetIdentifierString)
+	return a.convertToAddress(testnetIdentifierByte, TestnetIdentifier)
 }
 
 // GetMainnetAddress returns the mainnet address string representation of this Address (i.e. `addr1...`).
 func (a Address) GetMainnetAddress() (string, error) {
 	const mainnetIdentifierByte byte = 0x61
-	const mainnetIdentifierString = "addr"
-	return a.convertToAddress(mainnetIdentifierByte, mainnetIdentifierString)
+	return a.convertToAddress(mainnetIdentifierByte, MainnetIdentifier)
 }
 
 // convertToAddress returns the address string for given network parameters.
