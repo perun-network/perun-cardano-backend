@@ -20,6 +20,12 @@ func MakeRandomAddress(rng *rand.Rand) address.Address {
 	return address.MakeAddressFromByteArray(addrBytes)
 }
 
+func MakeRandomSignature(rng *rand.Rand) wallet.Sig {
+	sig := make([]byte, wire.SignatureLength)
+	rng.Read(sig)
+	return sig
+}
+
 func MakeTooFewPublicKeyBytes(rng *rand.Rand) []byte {
 	return GetRandomByteSlice(0, address.PubKeyLength-1, rng)
 }
