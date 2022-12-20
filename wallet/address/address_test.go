@@ -11,70 +11,86 @@ import (
 
 func TestAddress_MarshalBinary(t *testing.T) {
 	rng := pkgtest.Prng(t)
-	r := test.NewMockRemote(rng)
-	uut := r.MockAddress
+	uut := test.MakeRandomAddress(rng)
 	actualBytes, err := uut.MarshalBinary()
 	require.NoError(t, err, "unable to marshal valid address")
 	require.Equal(
 		t,
-		r.MockPubKeyBytes[:],
+		uut.GetPubKeySlice(),
 		actualBytes,
 		"wrong bytes representation of marshalled address")
 }
 
-func TestAddress_UnmarshalBinary_ValidAddressBytes(t *testing.T) {
+func TestAddress_UnmarshalBinary(t *testing.T) {
 	rng := pkgtest.Prng(t)
-	r := test.NewMockRemote(rng)
-	uut := address.Address{}
-	err := uut.UnmarshalBinary(r.MockPubKeyBytes[:])
-	require.NoError(t, err, "unable to unmarshal valid address bytes")
-	require.Equal(
-		t,
-		r.MockAddress,
-		uut,
-		"marshalled address is not as expected",
-	)
-}
+	validTest := func() func(*testing.T) {
+		referenceAddress := test.MakeRandomAddress(rng)
 
-func TestAddress_UnmarshalBinary_InvalidAddressBytes(t *testing.T) {
-	rng := pkgtest.Prng(t)
-	r := test.NewMockRemote(rng)
-	uut := address.Address{}
-	err := uut.UnmarshalBinary(r.InvalidPubKeyBytes)
-	require.Errorf(
-		t,
-		err,
-		"failed to error when unmarshalling invalid public key bytes with length: %d",
-		len(r.InvalidPubKeyBytes),
-	)
+		return func(t *testing.T) {
+			t.Parallel()
+			uut := address.Address{}
+			err := uut.UnmarshalBinary(referenceAddress.GetPubKeySlice())
+			require.NoError(t, err, "unable to unmarshal valid address bytes")
+			require.Equal(
+				t,
+				referenceAddress,
+				uut,
+				"marshalled address is not as expected",
+			)
+		}
+	}
+	invalidTest := func(bytesOfInvalidLength []byte) func(*testing.T) {
+		return func(t *testing.T) {
+			t.Parallel()
+			uut := address.Address{}
+			err := uut.UnmarshalBinary(bytesOfInvalidLength)
+			require.Errorf(
+				t,
+				err,
+				"failed to error when unmarshalling invalid public key bytes with length: %d",
+				len(bytesOfInvalidLength),
+			)
+		}
+	}
+	for i := 0; i < 100; i++ {
+		t.Run("Valid", validTest())
+		t.Run("Invalid - too few bytes", invalidTest(test.MakeTooFewPublicKeyBytes(rng)))
+		t.Run("Invalid - too many bytes", invalidTest(test.MakeTooManyPublicKeyBytes(rng)))
+	}
 }
 
 func TestAddress_String(t *testing.T) {
 	rng := pkgtest.Prng(t)
-	r := test.NewMockRemote(rng)
+	uut := test.MakeRandomAddress(rng)
 	require.Equal(
 		t,
-		hex.EncodeToString(r.MockPubKeyBytes[:]),
-		r.MockAddress.String(),
+		hex.EncodeToString(uut.GetPubKeySlice()),
+		uut.String(),
 		"wrong string representation for public key",
 	)
 }
 
 func TestAddress_Equal(t *testing.T) {
 	rng := pkgtest.Prng(t)
-	r := test.NewMockRemote(rng)
-	a := &r.MockAddress
-	b := address.MakeAddressFromByteArray(r.MockPubKeyBytes)
-	require.True(t, a.Equal(&b), "addresses that have the same public key should be equal")
-	require.True(t, b.Equal(a), "address equality should be commutative")
+	a := test.MakeRandomAddress(rng)
+	equalToA := address.MakeAddressFromByteArray(a.GetPubKey())
+
+	// Get an address with a strictly different public key to a's.
+	differentToA := test.MakeRandomAddress(rng)
+	for differentToA.GetPubKey() == a.GetPubKey() {
+		differentToA = test.MakeRandomAddress(rng)
+	}
+
+	require.True(t, a.Equal(&equalToA), "addresses that have the same public key should be equal")
+	require.True(t, equalToA.Equal(&a), "address equality should be commutative")
 	require.False(
 		t,
-		r.MockAddress.Equal(&r.UnavailableAddress),
+		a.Equal(&differentToA),
 		"addresses with different public keys should not be equal",
 	)
 	require.False(
 		t,
-		r.UnavailableAddress.Equal(&r.MockAddress),
+		differentToA.Equal(&a),
 		"address equality should be commutative",
 	)
 	c := test.NewOtherAddressImpl(t)
