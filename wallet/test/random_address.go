@@ -10,3 +10,16 @@ func MakeRandomAddress(rng *rand.Rand) address.Address {
 	rng.Read(addrBytes[:])
 	return address.MakeAddressFromByteArray(addrBytes)
 }
+
+func MakeTooFewPublicKeyBytes(rng *rand.Rand) []byte {
+	tooFewBytes := make([]byte, rng.Intn(address.PubKeyLength))
+	rng.Read(tooFewBytes)
+	return tooFewBytes
+}
+
+func MakeTooManyPublicKeyBytes(rng *rand.Rand) []byte {
+	const maxInvalidPubKeyLength = address.PubKeyLength * 2
+	tooManyBytes := make([]byte, rng.Intn(maxInvalidPubKeyLength-address.PubKeyLength)+address.PubKeyLength+1)
+	rng.Read(tooManyBytes)
+	return tooManyBytes
+}
