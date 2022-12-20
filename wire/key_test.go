@@ -14,7 +14,7 @@ func TestMakePubKey(t *testing.T) {
 	rng := pkgtest.Prng(t)
 	testAddr := test.MakeRandomAddress(rng)
 
-	expected := wire.PubKey{PubKey: hex.EncodeToString(testAddr.GetPubKeySlice())}
+	expected := wire.PubKey{Hex: hex.EncodeToString(testAddr.GetPubKeySlice())}
 	actual := wire.MakePubKey(testAddr)
 	require.Equal(t, expected, actual, "PubKey not as expected")
 }
@@ -24,7 +24,7 @@ func TestPubKey_Decode(t *testing.T) {
 
 	rng := pkgtest.Prng(t)
 	expected := test.MakeRandomAddress(rng)
-	uut := wire.PubKey{PubKey: hex.EncodeToString(expected.GetPubKeySlice())}
+	uut := wire.PubKey{Hex: hex.EncodeToString(expected.GetPubKeySlice())}
 	actual, err := uut.Decode()
 	require.NoError(t, err, "unexpected error when decoding public key")
 	require.Equal(t, expected, actual, "decoded address is wrong")
@@ -35,7 +35,7 @@ func TestPubKey_Decode(t *testing.T) {
 	} else {
 		invalidPubKeyBytes = make([]byte, rng.Intn(maxInvalidPubKeyLength-address.PubKeyLength)+address.PubKeyLength+1)
 	}
-	uut = wire.PubKey{PubKey: hex.EncodeToString(invalidPubKeyBytes)}
+	uut = wire.PubKey{Hex: hex.EncodeToString(invalidPubKeyBytes)}
 	_, err = uut.Decode()
 	require.Errorf(t, err, "failed to return error when decoding PubKey with invalid pubKeyLength %d", len(invalidPubKeyBytes))
 }

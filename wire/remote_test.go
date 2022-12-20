@@ -49,7 +49,7 @@ func TestMakeSignature(t *testing.T) {
 	rng := pkgtest.Prng(t)
 	testSig := make(wallet.Sig, wire.SignatureLength)
 	rng.Read(testSig)
-	expected := wire.Signature{Signature: hex.EncodeToString(testSig)}
+	expected := wire.Signature{Hex: hex.EncodeToString(testSig)}
 	actual := wire.MakeSignature(testSig)
 	require.Equal(t, expected, actual, "signature is not as expected")
 }

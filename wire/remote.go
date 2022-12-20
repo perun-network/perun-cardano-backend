@@ -42,12 +42,12 @@ func MakeVerificationRequest(sig wallet.Sig, address address.Address, message []
 
 // Signature is the json serialization for the cardano signature type (see: Ledger.Crypto.Signature).
 type Signature struct {
-	Signature string `json:"getSignature"`
+	Hex string `json:"getSignature"`
 }
 
 // MakeSignature returns a new Signature. Note that this does not check the length of the received wallet.Sig.
 func MakeSignature(sig wallet.Sig) Signature {
-	return Signature{Signature: hex.EncodeToString(sig)}
+	return Signature{Hex: hex.EncodeToString(sig)}
 }
 
 // KeyAvailabilityRequest is the json serializable request for key-availability via the perun-cardano-wallet api.
@@ -63,7 +63,7 @@ type SigningResponse = Signature
 
 // Decode decodes the siganture from a SigningResponse.
 func (sr SigningResponse) Decode() (wallet.Sig, error) {
-	sig, err := hex.DecodeString(sr.Signature)
+	sig, err := hex.DecodeString(sr.Hex)
 	if err != nil {
 		return nil, fmt.Errorf("unable to decode Signature from hex string: %w", err)
 	}

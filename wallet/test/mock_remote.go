@@ -106,7 +106,7 @@ func makeCallSignDefault(r *MockRemote) func(request wire.SigningRequest) (wire.
 		if request.Message != r.MockMessageString {
 			return wire.SigningResponse{}, fmt.Errorf("invalid data for mock remote")
 		}
-		return wire.Signature{Signature: r.MockSignatureString}, nil
+		return wire.Signature{Hex: r.MockSignatureString}, nil
 	}
 }
 
@@ -126,14 +126,14 @@ func makeCallVerifyDefault(r *MockRemote) func(wire.VerificationRequest) (wire.V
 		if request.Message != r.MockMessageString {
 			return false, fmt.Errorf("invalid data for mock remote")
 		}
-		if request.Signature.Signature == r.MockSignatureString {
+		if request.Signature.Hex == r.MockSignatureString {
 			return true, nil
 		}
-		if request.Signature.Signature == r.OtherSignatureString {
+		if request.Signature.Hex == r.OtherSignatureString {
 			return false, nil
 		}
-		if request.Signature.Signature == hex.EncodeToString(r.InvalidSignatureShorter) ||
-			request.Signature.Signature == hex.EncodeToString(r.InvalidSignatureLonger) {
+		if request.Signature.Hex == hex.EncodeToString(r.InvalidSignatureShorter) ||
+			request.Signature.Hex == hex.EncodeToString(r.InvalidSignatureLonger) {
 			panic("mock remote received signature of invalid length to verify")
 		}
 		return false, fmt.Errorf("invalid signature for mock remote")
