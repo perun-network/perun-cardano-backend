@@ -2,7 +2,6 @@ package types
 
 import (
 	"perun.network/go-perun/channel"
-	"reflect"
 )
 
 // ChannelState is the cardano backend equivalent to go-perun's channel.State.
@@ -23,8 +22,19 @@ func MakeChannelState(id channel.ID, balances []uint64, version uint64, final bo
 }
 
 func (cs ChannelState) Equal(other ChannelState) bool {
-	return cs.ID == other.ID &&
-		reflect.DeepEqual(cs.Balances, other.Balances) &&
+	equal := cs.ID == other.ID &&
 		cs.Version == other.Version &&
 		cs.Final == other.Final
+	if !equal {
+		return false
+	}
+	if len(cs.Balances) != len(other.Balances) {
+		return false
+	}
+	for i, bal := range cs.Balances {
+		if bal != other.Balances[i] {
+			return false
+		}
+	}
+	return true
 }
