@@ -9,6 +9,7 @@ import (
 
 const ChannelIDLength = 32
 
+// ChannelState reflects the Haskell type `ChannelState` of the Channel Smart Contract in respect to its json encoding.
 type ChannelState struct {
 	Balances  []uint64  `json:"balances"`
 	ChannelID ChannelID `json:"channelId"`

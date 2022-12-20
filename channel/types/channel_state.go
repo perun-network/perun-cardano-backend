@@ -5,6 +5,7 @@ import (
 	"reflect"
 )
 
+// ChannelState is the cardano backend equivalent to go-perun's channel.State.
 type ChannelState struct {
 	ID       channel.ID
 	Balances []uint64
