@@ -102,19 +102,7 @@ func makeCallEndpointDefault(r *MockRemote) func(string, interface{}, interface{
 			if !ok {
 				return fmt.Errorf("unable to cast resp to SingingResponse")
 			}
-			reqAddr, err := request.PubKey.Decode()
-			if err != nil {
-				return fmt.Errorf("unable to decode PubKey from request")
-			}
-			if !reqAddr.Equal(&r.MockAddress) {
-				return fmt.Errorf("invalid public key for mock remote")
-			}
-
-			if request.Message != r.MockMessageString {
-				return fmt.Errorf("invalid data for mock remote")
-			}
-			response.Hex = r.MockSignatureString
-			return nil
+			return callSign(r, request, response)
 		case wallet.EndpointVerifyDataSignature:
 			request, ok := req.(wire.VerificationRequest)
 			if !ok {
@@ -124,33 +112,7 @@ func makeCallEndpointDefault(r *MockRemote) func(string, interface{}, interface{
 			if !ok {
 				return fmt.Errorf("unable to cast resp to VerificationResponse")
 			}
-			reqAddr, err := request.PubKey.Decode()
-			if err != nil {
-				return fmt.Errorf("unable to decode PubKey from request")
-			}
-			if !reqAddr.Equal(&r.MockAddress) && !reqAddr.Equal(&r.UnavailableAddress) {
-				return fmt.Errorf("invalid public key for mock remote")
-			}
-			if reqAddr.Equal(&r.UnavailableAddress) {
-				*response = false
-				return nil
-			}
-			if request.Message != r.MockMessageString {
-				return fmt.Errorf("invalid data for mock remote")
-			}
-			if request.Signature.Hex == r.MockSignatureString {
-				*response = true
-				return nil
-			}
-			if request.Signature.Hex == r.OtherSignatureString {
-				*response = false
-				return nil
-			}
-			if request.Signature.Hex == hex.EncodeToString(r.InvalidSignatureShorter) ||
-				request.Signature.Hex == hex.EncodeToString(r.InvalidSignatureLonger) {
-				panic("mock remote received signature of invalid length to verify")
-			}
-			return fmt.Errorf("invalid signature for mock remote")
+			return callVerify(r, request, response)
 		case wallet.EndpointKeyAvailable:
 			request, ok := req.(wire.KeyAvailabilityRequest)
 			if !ok {
@@ -160,12 +122,7 @@ func makeCallEndpointDefault(r *MockRemote) func(string, interface{}, interface{
 			if !ok {
 				return fmt.Errorf("unable to cast resp to KeyAvailabilityResponse")
 			}
-			reqAddr, err := request.Decode()
-			if err != nil {
-				return fmt.Errorf("unable to decode address from request: %w", err)
-			}
-			*response = reqAddr.Equal(&r.MockAddress)
-			return nil
+			return callKeyAvailable(r, request, response)
 		case wallet.EndpointSignChannelState:
 			request, ok := req.(wire.ChannelStateSigningRequest)
 			if !ok {
@@ -175,18 +132,7 @@ func makeCallEndpointDefault(r *MockRemote) func(string, interface{}, interface{
 			if !ok {
 				return fmt.Errorf("unable to cast resp to SingingResponse")
 			}
-			reqAddr, err := request.PubKey.Decode()
-			if err != nil {
-				return fmt.Errorf("unable to decode PubKey from request")
-			}
-			if !reqAddr.Equal(&r.MockAddress) {
-				return fmt.Errorf("invalid public key for mock remote")
-			}
-			if !request.ChannelState.Decode().Equal(r.MockChannelState) {
-				return fmt.Errorf("invalid channel state for mock remote")
-			}
-			response.Hex = r.MockSignatureString
-			return nil
+			return callSignChannelState(r, request, response)
 		case wallet.EndpointVerifyChannelStateSignature:
 			request, ok := req.(wire.ChannelStateVerificationRequest)
 			if !ok {
@@ -196,39 +142,114 @@ func makeCallEndpointDefault(r *MockRemote) func(string, interface{}, interface{
 			if !ok {
 				return fmt.Errorf("unable to cast resp to VerificationResponse")
 			}
-			reqAddr, err := request.PubKey.Decode()
-			if err != nil {
-				return fmt.Errorf("unable to decode PubKey from request")
-			}
-			if !reqAddr.Equal(&r.MockAddress) && !reqAddr.Equal(&r.UnavailableAddress) {
-				return fmt.Errorf("invalid public key for mock remote")
-			}
-			if reqAddr.Equal(&r.UnavailableAddress) {
-				*response = false
-				return nil
-			}
-			if !request.ChannelState.Decode().Equal(r.MockChannelState) {
-				return fmt.Errorf("invalid data for mock remote")
-			}
-			if request.Signature.Hex == r.MockSignatureString {
-				*response = true
-				return nil
-			}
-			if request.Signature.Hex == r.OtherSignatureString {
-				*response = false
-				return nil
-			}
-			if request.Signature.Hex == hex.EncodeToString(r.InvalidSignatureShorter) ||
-				request.Signature.Hex == hex.EncodeToString(r.InvalidSignatureLonger) {
-				panic("mock remote received signature of invalid length to verify")
-			}
-			return fmt.Errorf("invalid signature for mock remote")
+			return callVerifyChannelState(r, request, response)
 		default:
 			return fmt.Errorf("unable to recognize endpoint: %s", endpoint)
 
 		}
 	}
 }
+
 func (m *MockRemote) CallEndpoint(endpoint string, request interface{}, response interface{}) error {
 	return m.callEndpoint(endpoint, request, response)
+}
+
+func callSign(r *MockRemote, request wire.SigningRequest, response *wire.SigningResponse) error {
+	reqAddr, err := request.PubKey.Decode()
+	if err != nil {
+		return fmt.Errorf("unable to decode PubKey from request")
+	}
+	if !reqAddr.Equal(&r.MockAddress) {
+		return fmt.Errorf("invalid public key for mock remote")
+	}
+
+	if request.Message != r.MockMessageString {
+		return fmt.Errorf("invalid data for mock remote")
+	}
+	response.Hex = r.MockSignatureString
+	return nil
+}
+
+func callVerify(r *MockRemote, request wire.VerificationRequest, response *wire.VerificationResponse) error {
+	reqAddr, err := request.PubKey.Decode()
+	if err != nil {
+		return fmt.Errorf("unable to decode PubKey from request")
+	}
+	if !reqAddr.Equal(&r.MockAddress) && !reqAddr.Equal(&r.UnavailableAddress) {
+		return fmt.Errorf("invalid public key for mock remote")
+	}
+	if reqAddr.Equal(&r.UnavailableAddress) {
+		*response = false
+		return nil
+	}
+	if request.Message != r.MockMessageString {
+		return fmt.Errorf("invalid data for mock remote")
+	}
+	if request.Signature.Hex == r.MockSignatureString {
+		*response = true
+		return nil
+	}
+	if request.Signature.Hex == r.OtherSignatureString {
+		*response = false
+		return nil
+	}
+	if request.Signature.Hex == hex.EncodeToString(r.InvalidSignatureShorter) ||
+		request.Signature.Hex == hex.EncodeToString(r.InvalidSignatureLonger) {
+		panic("mock remote received signature of invalid length to verify")
+	}
+	return fmt.Errorf("invalid signature for mock remote")
+}
+
+func callSignChannelState(r *MockRemote, request wire.ChannelStateSigningRequest, response *wire.SigningResponse) error {
+	reqAddr, err := request.PubKey.Decode()
+	if err != nil {
+		return fmt.Errorf("unable to decode PubKey from request")
+	}
+	if !reqAddr.Equal(&r.MockAddress) {
+		return fmt.Errorf("invalid public key for mock remote")
+	}
+	if !request.ChannelState.Decode().Equal(r.MockChannelState) {
+		return fmt.Errorf("invalid channel state for mock remote")
+	}
+	response.Hex = r.MockSignatureString
+	return nil
+}
+
+func callVerifyChannelState(r *MockRemote, request wire.ChannelStateVerificationRequest, response *wire.VerificationResponse) error {
+	reqAddr, err := request.PubKey.Decode()
+	if err != nil {
+		return fmt.Errorf("unable to decode PubKey from request")
+	}
+	if !reqAddr.Equal(&r.MockAddress) && !reqAddr.Equal(&r.UnavailableAddress) {
+		return fmt.Errorf("invalid public key for mock remote")
+	}
+	if reqAddr.Equal(&r.UnavailableAddress) {
+		*response = false
+		return nil
+	}
+	if !request.ChannelState.Decode().Equal(r.MockChannelState) {
+		return fmt.Errorf("invalid data for mock remote")
+	}
+	if request.Signature.Hex == r.MockSignatureString {
+		*response = true
+		return nil
+	}
+	if request.Signature.Hex == r.OtherSignatureString {
+		*response = false
+		return nil
+	}
+	if request.Signature.Hex == hex.EncodeToString(r.InvalidSignatureShorter) ||
+		request.Signature.Hex == hex.EncodeToString(r.InvalidSignatureLonger) {
+		panic("mock remote received signature of invalid length to verify")
+	}
+	return fmt.Errorf("invalid signature for mock remote")
+}
+
+func callKeyAvailable(r *MockRemote, request wire.KeyAvailabilityRequest, response *wire.KeyAvailabilityResponse) error {
+	reqAddr, err := request.Decode()
+	if err != nil {
+		return fmt.Errorf("unable to decode address from request: %w", err)
+	}
+	*response = reqAddr.Equal(&r.MockAddress)
+	return nil
 }
