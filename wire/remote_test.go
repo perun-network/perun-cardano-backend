@@ -17,8 +17,7 @@ func TestMake(t *testing.T) {
 
 	randomSigningRequestTest := func() func(*testing.T) {
 		referenceAddress := test.MakeRandomAddress(rng)
-		referenceMessage := make([]byte, rng.Intn(maxMessageLength))
-		rng.Read(referenceMessage)
+		referenceMessage := test.GetRandomByteSlice(0, maxMessageLength, rng)
 
 		return func(t *testing.T) {
 			t.Parallel()
@@ -32,10 +31,8 @@ func TestMake(t *testing.T) {
 	}
 	randomVerificationRequestTest := func() func(*testing.T) {
 		referenceAddress := test.MakeRandomAddress(rng)
-		referenceSignature := make(wallet.Sig, wire.SignatureLength)
-		rng.Read(referenceSignature)
-		referenceMessage := make([]byte, rng.Intn(maxMessageLength))
-		rng.Read(referenceMessage)
+		referenceSignature := test.MakeRandomSignature(rng)
+		referenceMessage := test.GetRandomByteSlice(0, maxMessageLength, rng)
 
 		return func(t *testing.T) {
 			t.Parallel()
@@ -61,8 +58,7 @@ func TestMake(t *testing.T) {
 	}
 
 	randomSignatureTest := func() func(*testing.T) {
-		referenceSignature := make(wallet.Sig, wire.SignatureLength)
-		rng.Read(referenceSignature)
+		referenceSignature := test.MakeRandomSignature(rng)
 
 		return func(t *testing.T) {
 			t.Parallel()

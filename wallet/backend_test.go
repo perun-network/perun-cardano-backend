@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/require"
 	"io"
-	"math/rand"
 	"perun.network/perun-cardano-backend/wallet"
 	"perun.network/perun-cardano-backend/wallet/address"
 	"perun.network/perun-cardano-backend/wallet/test"
@@ -35,8 +34,7 @@ func TestBackend_DecodeSig(t *testing.T) {
 	require.NoError(t, err, "received an error when decoding signature")
 	require.Equal(t, r.MockSignature, actualSig, "decoded signature is incorrect")
 
-	randomBytes := make([]byte, rand.Intn(maxRandomBytesLength+1))
-	rand.Read(randomBytes)
+	randomBytes := test.GetRandomByteSlice(0, maxRandomBytesLength, rng)
 	readerLonger := bytes.NewReader(append(r.MockSignature, randomBytes...))
 	actualSig, err = uut.DecodeSig(readerLonger)
 	require.NoError(t, err, "received an error when decoding signature")

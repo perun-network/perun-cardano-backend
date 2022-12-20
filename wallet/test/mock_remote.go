@@ -51,8 +51,6 @@ func NewMockRemote(rng *rand.Rand) *MockRemote {
 
 func initializeRandomValues(r *MockRemote, rng *rand.Rand) {
 	const maxMessageLength = 0x100 // in bytes
-	const maxInvalidPubKeyLength = address.PubKeyLength * 2
-	const maxInvalidSignatureLength = wire.SignatureLength * 2
 
 	r.MockAddress = MakeRandomAddress(rng)
 	r.MockPubKeyBytes = r.MockAddress.GetPubKey()
@@ -62,30 +60,26 @@ func initializeRandomValues(r *MockRemote, rng *rand.Rand) {
 	}
 
 	if rng.Int()%2 == 0 {
-		r.InvalidPubKeyBytes = make([]byte, rng.Intn(address.PubKeyLength))
+		r.InvalidPubKeyBytes = MakeTooFewPublicKeyBytes(rng)
 	} else {
-		r.InvalidPubKeyBytes = make([]byte, rng.Intn(maxInvalidPubKeyLength-address.PubKeyLength)+address.PubKeyLength+1)
+		r.InvalidPubKeyBytes = MakeTooManyPublicKeyBytes(rng)
 	}
 	rng.Read(r.InvalidPubKeyBytes)
 
-	r.MockSignature = make([]byte, wire.SignatureLength)
-	rng.Read(r.MockSignature)
+	r.MockSignature = MakeRandomSignature(rng)
 	r.MockSignatureString = hex.EncodeToString(r.MockSignature)
 
-	r.OtherSignature = make([]byte, wire.SignatureLength)
+	r.OtherSignature = MakeRandomSignature(rng)
 	for bytes.Equal(r.MockSignature, r.OtherSignature) {
 		rng.Read(r.OtherSignature)
 	}
 	r.OtherSignatureString = hex.EncodeToString(r.OtherSignature)
 
-	r.InvalidSignatureShorter = make([]byte, rng.Intn(wire.SignatureLength))
-	rng.Read(r.InvalidSignatureShorter)
+	r.InvalidSignatureShorter = MakeTooShortSignature(rng)
 
-	r.InvalidSignatureLonger = make([]byte, rng.Intn(maxInvalidSignatureLength-wire.SignatureLength)+wire.SignatureLength+1)
-	rng.Read(r.InvalidSignatureLonger)
+	r.InvalidSignatureLonger = MakeTooLongSignature(rng)
 
-	r.MockMessage = make([]byte, rng.Intn(maxMessageLength+1))
-	rng.Read(r.MockMessage)
+	r.MockMessage = GetRandomByteSlice(0, maxMessageLength, rng)
 	r.MockMessageString = hex.EncodeToString(r.MockMessage)
 }
 
