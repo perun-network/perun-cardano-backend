@@ -3,18 +3,20 @@ package wallet
 import (
 	"fmt"
 	"perun.network/go-perun/wallet"
+	"perun.network/perun-cardano-backend/wallet/address"
+	"perun.network/perun-cardano-backend/wire"
 )
 
 // RemoteAccount represents a cardano account. The secrets are stored on the associated remote walletServer.
 type RemoteAccount struct {
-	AccountAddress Address
+	AccountAddress address.Address
 	walletServer   Remote
 }
 
 // MakeRemoteAccount returns a new RemoteAccount instance.
-func MakeRemoteAccount(pubKey Address, r Remote) RemoteAccount {
+func MakeRemoteAccount(addr address.Address, r Remote) RemoteAccount {
 	return RemoteAccount{
-		AccountAddress: pubKey,
+		AccountAddress: addr,
 		walletServer:   r,
 	}
 }
@@ -26,7 +28,7 @@ func (a RemoteAccount) Address() wallet.Address {
 
 // SignData signs arbitrary data with this account.
 func (a RemoteAccount) SignData(data []byte) (wallet.Sig, error) {
-	request := MakeSigningRequest(a.AccountAddress, data)
+	request := wire.MakeSigningRequest(a.AccountAddress, data)
 
 	signatureResponse, err := a.walletServer.CallSign(request)
 	if err != nil {

@@ -5,20 +5,20 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/rand"
-	"perun.network/perun-cardano-backend/wallet"
+	"perun.network/perun-cardano-backend/wallet/address"
+	"perun.network/perun-cardano-backend/wire"
 )
 
 // MockRemote should only be instantiated using NewMockRemote.
 // The default implementation has one valid signature tuple:
 // (MockMessage, MockSignature, MockAddress).
 type MockRemote struct {
-	MockAddress      wallet.Address
-	MockAddressBytes []byte
-	// UnavailableAddress is a valid wallet.Address that has associated account (private key) in this remote wallet.
-	UnavailableAddress wallet.Address
-	// InvalidAddress is invalid because it is not exactly wallet.PubKeyLength bytes long.
-	InvalidAddress      wallet.Address
-	InvalidAddressBytes []byte
+	MockAddress     address.Address
+	MockPubKeyBytes [address.PubKeyLength]byte
+	// UnavailableAddress is a valid wallet.PubKey that has associated account (private key) in this remote wallet.
+	UnavailableAddress address.Address
+	// InvalidPubKeyBytes is invalid because it is not exactly wallet.PubKeyLength bytes long.
+	InvalidPubKeyBytes []byte
 
 	MockSignature       []byte
 	MockSignatureString string
@@ -34,9 +34,9 @@ type MockRemote struct {
 	MockMessage       []byte
 	MockMessageString string
 
-	callSign         func(wallet.SigningRequest) (wallet.SigningResponse, error)
-	callVerify       func(wallet.VerificationRequest) (wallet.VerificationResponse, error)
-	callKeyAvailable func(wallet.KeyAvailabilityRequest) (wallet.KeyAvailabilityResponse, error)
+	callSign         func(wire.SigningRequest) (wire.SigningResponse, error)
+	callVerify       func(wire.VerificationRequest) (wire.VerificationResponse, error)
+	callKeyAvailable func(wire.KeyAvailabilityRequest) (wire.KeyAvailabilityResponse, error)
 }
 
 func NewMockRemote(rng *rand.Rand) *MockRemote {
@@ -51,109 +51,107 @@ func NewMockRemote(rng *rand.Rand) *MockRemote {
 
 func initializeRandomValues(r *MockRemote, rng *rand.Rand) {
 	const maxMessageLength = 0x100 // in bytes
-	const maxInvalidPubKeyLength = wallet.PubKeyLength * 2
-	const maxInvalidSignatureLength = wallet.SignatureLength * 2
 
-	r.MockAddressBytes = make([]byte, wallet.PubKeyLength)
-	rng.Read(r.MockAddressBytes)
-	r.MockAddress = wallet.Address{PubKey: hex.EncodeToString(r.MockAddressBytes)}
+	r.MockAddress = MakeRandomAddress(rng)
+	r.MockPubKeyBytes = r.MockAddress.GetPubKey()
 
-	unavailablePubKeyBytes := make([]byte, wallet.PubKeyLength)
-	for bytes.Equal(r.MockAddressBytes, unavailablePubKeyBytes) {
-		rng.Read(unavailablePubKeyBytes)
+	for bytes.Equal(r.UnavailableAddress.GetPubKeySlice(), r.MockPubKeyBytes[:]) {
+		r.UnavailableAddress = MakeRandomAddress(rng)
 	}
-	r.UnavailableAddress = wallet.Address{PubKey: hex.EncodeToString(unavailablePubKeyBytes)}
 
 	if rng.Int()%2 == 0 {
-		r.InvalidAddressBytes = make([]byte, rng.Intn(wallet.PubKeyLength))
+		r.InvalidPubKeyBytes = MakeTooFewPublicKeyBytes(rng)
 	} else {
-		r.InvalidAddressBytes = make([]byte, rng.Intn(maxInvalidPubKeyLength-wallet.PubKeyLength)+wallet.PubKeyLength+1)
+		r.InvalidPubKeyBytes = MakeTooManyPublicKeyBytes(rng)
 	}
-	rng.Read(r.InvalidAddressBytes)
-	r.InvalidAddress = wallet.Address{PubKey: hex.EncodeToString(r.InvalidAddressBytes)}
+	rng.Read(r.InvalidPubKeyBytes)
 
-	r.MockSignature = make([]byte, wallet.SignatureLength)
-	rng.Read(r.MockSignature)
+	r.MockSignature = MakeRandomSignature(rng)
 	r.MockSignatureString = hex.EncodeToString(r.MockSignature)
 
-	r.OtherSignature = make([]byte, wallet.SignatureLength)
+	r.OtherSignature = MakeRandomSignature(rng)
 	for bytes.Equal(r.MockSignature, r.OtherSignature) {
 		rng.Read(r.OtherSignature)
 	}
 	r.OtherSignatureString = hex.EncodeToString(r.OtherSignature)
 
-	r.InvalidSignatureShorter = make([]byte, rng.Intn(wallet.SignatureLength))
-	rng.Read(r.InvalidSignatureShorter)
+	r.InvalidSignatureShorter = MakeTooShortSignature(rng)
 
-	r.InvalidSignatureLonger = make([]byte, rng.Intn(maxInvalidSignatureLength-wallet.SignatureLength)+wallet.SignatureLength+1)
-	rng.Read(r.InvalidSignatureLonger)
+	r.InvalidSignatureLonger = MakeTooLongSignature(rng)
 
-	r.MockMessage = make([]byte, rng.Intn(maxMessageLength+1))
-	rng.Read(r.MockMessage)
+	r.MockMessage = GetRandomByteSlice(0, maxMessageLength, rng)
 	r.MockMessageString = hex.EncodeToString(r.MockMessage)
 }
 
-func (m *MockRemote) SetCallSign(f func(request wallet.SigningRequest) (wallet.SigningResponse, error)) {
+func (m *MockRemote) SetCallSign(f func(request wire.SigningRequest) (wire.SigningResponse, error)) {
 	m.callSign = f
 }
 
-func makeCallSignDefault(r *MockRemote) func(request wallet.SigningRequest) (wallet.SigningResponse, error) {
-	return func(request wallet.SigningRequest) (wallet.SigningResponse, error) {
-		if !request.AccountPubKey.Equal(&r.MockAddress) {
-			return wallet.SigningResponse{}, fmt.Errorf("invalid public key for mock remote")
+func makeCallSignDefault(r *MockRemote) func(request wire.SigningRequest) (wire.SigningResponse, error) {
+	return func(request wire.SigningRequest) (wire.SigningResponse, error) {
+		reqAddr, err := request.PubKey.Decode()
+		if err != nil {
+			return wire.SigningResponse{}, fmt.Errorf("unable to decode PubKey from request")
+		}
+		if !reqAddr.Equal(&r.MockAddress) {
+			return wire.SigningResponse{}, fmt.Errorf("invalid public key for mock remote")
 		}
 
 		if request.Message != r.MockMessageString {
-			return wallet.SigningResponse{}, fmt.Errorf("invalid data for mock remote")
+			return wire.SigningResponse{}, fmt.Errorf("invalid data for mock remote")
 		}
-		return wallet.SignatureWrapper{Signature: r.MockSignatureString}, nil
+		return wire.Signature{Hex: r.MockSignatureString}, nil
 	}
 }
 
-func makeCallVerifyDefault(r *MockRemote) func(wallet.VerificationRequest) (wallet.VerificationResponse, error) {
-	return func(request wallet.VerificationRequest) (wallet.VerificationResponse, error) {
-		if !request.Address.Equal(&r.MockAddress) && !request.Address.Equal(&r.UnavailableAddress) {
+func makeCallVerifyDefault(r *MockRemote) func(wire.VerificationRequest) (wire.VerificationResponse, error) {
+	return func(request wire.VerificationRequest) (wire.VerificationResponse, error) {
+		reqAddr, err := request.PubKey.Decode()
+		if err != nil {
+			return false, fmt.Errorf("unable to decode PubKey from request")
+		}
+		if !reqAddr.Equal(&r.MockAddress) && !reqAddr.Equal(&r.UnavailableAddress) {
 			return false, fmt.Errorf("invalid public key for mock remote")
 		}
-		if request.Address.Equal(&r.UnavailableAddress) {
+		if reqAddr.Equal(&r.UnavailableAddress) {
 			return false, nil
 		}
 
 		if request.Message != r.MockMessageString {
 			return false, fmt.Errorf("invalid data for mock remote")
 		}
-		if request.SigWrapper.Signature == r.MockSignatureString {
+		if request.Signature.Hex == r.MockSignatureString {
 			return true, nil
 		}
-		if request.SigWrapper.Signature == r.OtherSignatureString {
+		if request.Signature.Hex == r.OtherSignatureString {
 			return false, nil
 		}
-		if request.SigWrapper.Signature == hex.EncodeToString(r.InvalidSignatureShorter) ||
-			request.SigWrapper.Signature == hex.EncodeToString(r.InvalidSignatureLonger) {
+		if request.Signature.Hex == hex.EncodeToString(r.InvalidSignatureShorter) ||
+			request.Signature.Hex == hex.EncodeToString(r.InvalidSignatureLonger) {
 			panic("mock remote received signature of invalid length to verify")
 		}
 		return false, fmt.Errorf("invalid signature for mock remote")
 	}
 }
 
-func makeCallKeyAvailableDefault(r *MockRemote) func(wallet.KeyAvailabilityRequest) (wallet.KeyAvailabilityResponse, error) {
-	return func(request wallet.KeyAvailabilityRequest) (wallet.KeyAvailabilityResponse, error) {
-		_, err := request.MarshalBinary()
+func makeCallKeyAvailableDefault(r *MockRemote) func(wire.KeyAvailabilityRequest) (wire.KeyAvailabilityResponse, error) {
+	return func(request wire.KeyAvailabilityRequest) (wire.KeyAvailabilityResponse, error) {
+		reqAddr, err := request.Decode()
 		if err != nil {
-			return false, fmt.Errorf("invalid pubKey: %w", err)
+			return false, fmt.Errorf("unable to decode address from request: %w", err)
 		}
-		return request.Equal(&r.MockAddress), nil
+		return reqAddr.Equal(&r.MockAddress), nil
 	}
 }
 
-func (m *MockRemote) CallSign(request wallet.SigningRequest) (wallet.SigningResponse, error) {
+func (m *MockRemote) CallSign(request wire.SigningRequest) (wire.SigningResponse, error) {
 	return m.callSign(request)
 }
 
-func (m *MockRemote) CallVerify(request wallet.VerificationRequest) (wallet.VerificationResponse, error) {
+func (m *MockRemote) CallVerify(request wire.VerificationRequest) (wire.VerificationResponse, error) {
 	return m.callVerify(request)
 }
 
-func (m *MockRemote) CallKeyAvailable(request wallet.KeyAvailabilityRequest) (wallet.KeyAvailabilityResponse, error) {
+func (m *MockRemote) CallKeyAvailable(request wire.KeyAvailabilityRequest) (wire.KeyAvailabilityResponse, error) {
 	return m.callKeyAvailable(request)
 }

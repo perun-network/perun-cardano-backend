@@ -6,17 +6,18 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"perun.network/perun-cardano-backend/wire"
 )
 
 // Remote is an interface, which instances are used to communicate with the perun-cardano-wallet server.
 type Remote interface {
 	// CallSign is the endpoint for signing data with the perun-cardano-wallet.
-	CallSign(SigningRequest) (SigningResponse, error)
+	CallSign(wire.SigningRequest) (wire.SigningResponse, error)
 	// CallVerify is the endpoint for verifying signatures with the perun-cardano-wallet.
-	CallVerify(VerificationRequest) (VerificationResponse, error)
+	CallVerify(wire.VerificationRequest) (wire.VerificationResponse, error)
 	// CallKeyAvailable is the endpoint for verifying that the connected perun-cardano-wallet has the private key to
 	// a given Address.
-	CallKeyAvailable(request KeyAvailabilityRequest) (KeyAvailabilityResponse, error)
+	CallKeyAvailable(request wire.KeyAvailabilityRequest) (wire.KeyAvailabilityResponse, error)
 }
 
 // PerunCardanoWallet is a basic implementation Remote implementation that calls perun-cardano-wallet via http.
@@ -29,26 +30,26 @@ func NewPerunCardanoWallet(addr string) *PerunCardanoWallet {
 }
 
 // CallSign computes a Signature for the given SigningRequest via the perun-cardano-wallet server.
-func (r *PerunCardanoWallet) CallSign(body SigningRequest) (SigningResponse, error) {
+func (r *PerunCardanoWallet) CallSign(body wire.SigningRequest) (wire.SigningResponse, error) {
 	const signEndpoint = "/sign"
 	jsonBody, err := json.Marshal(body)
 	if err != nil {
-		return SigningResponse{}, fmt.Errorf("unable to marshal json for signing request body: %w", err)
+		return wire.SigningResponse{}, fmt.Errorf("unable to marshal json for signing request body: %w", err)
 	}
 	jsonResponse, err := r.callEndpoint(jsonBody, signEndpoint)
 	if err != nil {
-		return SigningResponse{}, fmt.Errorf("failed to call endpoint: %w", err)
+		return wire.SigningResponse{}, fmt.Errorf("failed to call endpoint: %w", err)
 	}
-	var result SigningResponse
+	var result wire.SigningResponse
 	if err = json.Unmarshal(jsonResponse, &result); err != nil {
-		return SigningResponse{}, fmt.Errorf("failed to unmarshal wallet server response for singing: %w", err)
+		return wire.SigningResponse{}, fmt.Errorf("failed to unmarshal wallet server response for singing: %w", err)
 	}
 	return result, nil
 }
 
 // CallVerify verifies the (message, signature, public key) tuple in the given VerificationRequest via the
 // perun-cardano-wallet server.
-func (r *PerunCardanoWallet) CallVerify(body VerificationRequest) (VerificationResponse, error) {
+func (r *PerunCardanoWallet) CallVerify(body wire.VerificationRequest) (wire.VerificationResponse, error) {
 	const verifyEndpoint = "/verify"
 	jsonBody, err := json.Marshal(body)
 	if err != nil {
@@ -58,7 +59,7 @@ func (r *PerunCardanoWallet) CallVerify(body VerificationRequest) (VerificationR
 	if err != nil {
 		return false, fmt.Errorf("failed to call endpoint: %w", err)
 	}
-	var result VerificationResponse
+	var result wire.VerificationResponse
 	if err = json.Unmarshal(jsonResponse, &result); err != nil {
 		return false, fmt.Errorf("failed to unmarshal wallet server response for verification: %w", err)
 	}
@@ -67,7 +68,7 @@ func (r *PerunCardanoWallet) CallVerify(body VerificationRequest) (VerificationR
 
 // CallKeyAvailable queries whether the connected perun-cardano-wallet server has the private key for the public key
 // given in the KeyAvailabilityRequest.
-func (r *PerunCardanoWallet) CallKeyAvailable(body KeyAvailabilityRequest) (KeyAvailabilityResponse, error) {
+func (r *PerunCardanoWallet) CallKeyAvailable(body wire.KeyAvailabilityRequest) (wire.KeyAvailabilityResponse, error) {
 	const keyAvailableEndpoint = "/keyAvailable"
 	jsonBody, err := json.Marshal(body)
 	if err != nil {
@@ -77,7 +78,7 @@ func (r *PerunCardanoWallet) CallKeyAvailable(body KeyAvailabilityRequest) (KeyA
 	if err != nil {
 		return false, fmt.Errorf("failed to call endpoint: %w", err)
 	}
-	var result KeyAvailabilityResponse
+	var result wire.KeyAvailabilityResponse
 	if err = json.Unmarshal(jsonResponse, &result); err != nil {
 		return false, fmt.Errorf("failed to unmarshal wallet server response for key availability %w", err)
 	}
