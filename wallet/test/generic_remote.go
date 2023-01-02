@@ -95,9 +95,6 @@ func (d ChannelStateSignature) Equal(other ChannelStateSignature) bool {
 // Signatures are generated randomly and all valid signature t-tuples are collected globally
 // in ValidSignatures. This means that GenericRemote verifies a signature as valid, iff it has been signed by ANY
 // Generic remote before.
-// Note:
-// Generic remote does not implement the ChannelState-specific endpoints wallet.EndpointSignChannelState and
-// wallet.EndpointVerifyChannelStateSignature because the generic go-perun wallet tests do not test for their use.
 type GenericRemote struct {
 	AvailableAddress address.Address
 	rng              *rand.Rand
@@ -108,7 +105,7 @@ type GenericRemote struct {
 	callEndpoint func(string, interface{}, interface{}) error
 }
 
-// NewGenericRemote returns a new generic remote instance. Every GenericRemote instance needs to receive on an exclusive
+// NewGenericRemote returns a new generic remote instance. Every GenericRemote instance needs to receive an exclusive
 // rand.Rand instance for concurrent safety!
 func NewGenericRemote(availableAddress address.Address, rng *rand.Rand) *GenericRemote {
 	g := GenericRemote{
@@ -137,26 +134,9 @@ func makeGenericCallEndpointDefault(g *GenericRemote) func(string, interface{}, 
 			}
 			response, ok := resp.(*wire.SigningResponse)
 			if !ok {
-				return fmt.Errorf("unable to cast resp to SingingResponse")
+				return fmt.Errorf("unable to cast response to SingingResponse")
 			}
-			reqAddr, err := request.PubKey.Decode()
-			if err != nil {
-				return fmt.Errorf("unable to decode PubKey from request")
-			}
-			if !reqAddr.Equal(&g.AvailableAddress) {
-				return fmt.Errorf("account is not available in wallet")
-			}
-			msg, err := hex.DecodeString(request.Message)
-			if err != nil {
-				return fmt.Errorf("unable to decode message")
-			}
-
-			g.mutex.Lock()
-			sig := MakeRandomSignature(g.rng)
-			g.mutex.Unlock()
-			AddDataSignature(reqAddr, sig, msg)
-			*response = wire.MakeSignature(sig)
-			return nil
+			return g.endpointSignData(request, response)
 		case wallet.EndpointVerifyDataSignature:
 			request, ok := req.(wire.VerificationRequest)
 			if !ok {
@@ -164,26 +144,9 @@ func makeGenericCallEndpointDefault(g *GenericRemote) func(string, interface{}, 
 			}
 			response, ok := resp.(*wire.VerificationResponse)
 			if !ok {
-				return fmt.Errorf("unable to cast resp to VerificationResponse")
+				return fmt.Errorf("unable to cast response to VerificationResponse")
 			}
-			reqAddr, err := request.PubKey.Decode()
-			if err != nil {
-				return fmt.Errorf("unable to decode PubKey from request")
-			}
-			sig, err := request.Signature.Decode()
-			if err != nil {
-				return fmt.Errorf("unable to decode signature")
-			}
-			msg, err := hex.DecodeString(request.Message)
-			if err != nil {
-				return fmt.Errorf("unable to decode message")
-			}
-			*response = VerifyDataSig(DataSignature{
-				Address:   reqAddr,
-				Signature: sig,
-				Message:   msg,
-			})
-			return nil
+			return g.endpointVerifyDataSignature(request, response)
 		case wallet.EndpointKeyAvailable:
 			request, ok := req.(wire.KeyAvailabilityRequest)
 			if !ok {
@@ -191,16 +154,117 @@ func makeGenericCallEndpointDefault(g *GenericRemote) func(string, interface{}, 
 			}
 			response, ok := resp.(*wire.KeyAvailabilityResponse)
 			if !ok {
-				return fmt.Errorf("unable to cast resp to KeyAvailabilityResponse")
+				return fmt.Errorf("unable to cast response to KeyAvailabilityResponse")
 			}
-			reqAddr, err := request.Decode()
-			if err != nil {
-				return fmt.Errorf("unable to decode PubKey from request")
+			return g.endpointKeyAvailable(request, response)
+		case wallet.EndpointSignChannelState:
+			request, ok := req.(wire.ChannelStateSigningRequest)
+			if !ok {
+				return fmt.Errorf("unable to cast request to ChannelStateSigningRequest")
 			}
-			*response = reqAddr.Equal(&g.AvailableAddress)
-			return nil
+			response, ok := resp.(*wire.SigningResponse)
+			if !ok {
+				return fmt.Errorf("unable to cast response to SigningResponse")
+			}
+			return g.endpointSignChannelState(request, response)
+		case wallet.EndpointVerifyChannelStateSignature:
+			request, ok := req.(wire.ChannelStateVerificationRequest)
+			if !ok {
+				return fmt.Errorf("unable to cast request to ChannelStateVerificationRequest")
+			}
+			response, ok := resp.(*wire.VerificationResponse)
+			if !ok {
+				return fmt.Errorf("unable to cast response to VerificationResponse")
+			}
+			return g.endpointVerifyChannelStateSignature(request, response)
 		default:
-			panic("unimplemented endpoint: " + endpoint)
+			return fmt.Errorf("invalid endpoint: %s", endpoint)
 		}
 	}
+}
+
+func (g *GenericRemote) endpointSignData(request wire.SigningRequest, response *wire.SigningResponse) error {
+	reqAddr, err := request.PubKey.Decode()
+	if err != nil {
+		return fmt.Errorf("unable to decode PubKey from request")
+	}
+	if !reqAddr.Equal(&g.AvailableAddress) {
+		return fmt.Errorf("account is not available in wallet")
+	}
+	msg, err := hex.DecodeString(request.Message)
+	if err != nil {
+		return fmt.Errorf("unable to decode message")
+	}
+
+	g.mutex.Lock()
+	sig := MakeRandomSignature(g.rng)
+	g.mutex.Unlock()
+	AddDataSignature(reqAddr, sig, msg)
+	*response = wire.MakeSignature(sig)
+	return nil
+}
+
+func (g *GenericRemote) endpointVerifyDataSignature(request wire.VerificationRequest, response *wire.VerificationResponse) error {
+	reqAddr, err := request.PubKey.Decode()
+	if err != nil {
+		return fmt.Errorf("unable to decode PubKey from request")
+	}
+	sig, err := request.Signature.Decode()
+	if err != nil {
+		return fmt.Errorf("unable to decode signature from request")
+	}
+	msg, err := hex.DecodeString(request.Message)
+	if err != nil {
+		return fmt.Errorf("unable to decode message")
+	}
+	*response = VerifyDataSig(DataSignature{
+		Address:   reqAddr,
+		Signature: sig,
+		Message:   msg,
+	})
+	return nil
+}
+
+func (g *GenericRemote) endpointKeyAvailable(request wire.KeyAvailabilityRequest, response *wire.KeyAvailabilityResponse) error {
+	reqAddr, err := request.Decode()
+	if err != nil {
+		return fmt.Errorf("unable to decode PubKey from request")
+	}
+	*response = reqAddr.Equal(&g.AvailableAddress)
+	return nil
+}
+
+func (g *GenericRemote) endpointSignChannelState(request wire.ChannelStateSigningRequest, response *wire.SigningResponse) error {
+	reqAddr, err := request.PubKey.Decode()
+	if err != nil {
+		return fmt.Errorf("unable to decode PubKey from request")
+	}
+	if !reqAddr.Equal(&g.AvailableAddress) {
+		return fmt.Errorf("account is not available in wallet")
+	}
+	state := request.ChannelState.Decode()
+	g.mutex.Lock()
+	sig := MakeRandomSignature(g.rng)
+	g.mutex.Unlock()
+	AddChannelStateSignature(reqAddr, sig, state)
+	*response = wire.MakeSignature(sig)
+	return nil
+}
+
+func (g *GenericRemote) endpointVerifyChannelStateSignature(request wire.ChannelStateVerificationRequest, response *wire.VerificationResponse) error {
+	reqAddr, err := request.PubKey.Decode()
+	if err != nil {
+		return fmt.Errorf("unable to decode PubKey from request")
+	}
+	sig, err := request.Signature.Decode()
+	if err != nil {
+		return fmt.Errorf("unable to decode signature from request")
+	}
+	state := request.ChannelState.Decode()
+	*response = VerifyChannelStateSig(ChannelStateSignature{
+		Address:      reqAddr,
+		Signature:    sig,
+		ChannelState: state,
+	})
+	return nil
 }
