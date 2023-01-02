@@ -2,6 +2,8 @@ package wallet_test
 
 import (
 	"github.com/stretchr/testify/require"
+	"math/rand"
+	gptest "perun.network/go-perun/wallet/test"
 	"perun.network/perun-cardano-backend/wallet"
 	"perun.network/perun-cardano-backend/wallet/test"
 	pkgtest "polycry.pt/poly-go/test"
@@ -80,4 +82,34 @@ func TestRemoteWallet_Unlock(t *testing.T) {
 		err,
 		"unlock should fail if the remote wallet does not have the private key to the given address",
 	)
+}
+
+func setup(rng *rand.Rand) *gptest.Setup {
+	r := test.NewGenericRemote(test.MakeRandomAddress(rng), rng)
+	w := wallet.NewRemoteWallet(r)
+	b := wallet.MakeRemoteBackend(r)
+	marshalledAddress, err := test.MakeRandomAddress(rng).MarshalBinary()
+	if err != nil {
+		panic(err)
+	}
+	zero := b.NewAddress()
+	return &gptest.Setup{
+		Backend:           b,
+		Wallet:            w,
+		AddressInWallet:   &r.AvailableAddress,
+		ZeroAddress:       zero,
+		AddressMarshalled: marshalledAddress,
+	}
+}
+
+func TestAddress(t *testing.T) {
+	gptest.TestAddress(t, setup(pkgtest.Prng(t)))
+}
+
+func TestGenericSignatureSize(t *testing.T) {
+	gptest.GenericSignatureSizeTest(t, setup(pkgtest.Prng(t)))
+}
+
+func TestAccountWithWalletAndBackend(t *testing.T) {
+	gptest.TestAccountWithWalletAndBackend(t, setup(pkgtest.Prng(t)))
 }
