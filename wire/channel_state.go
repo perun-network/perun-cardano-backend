@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"perun.network/go-perun/channel"
 	"perun.network/perun-cardano-backend/channel/types"
 )
 
@@ -30,7 +31,7 @@ func (cs ChannelState) Decode() types.ChannelState {
 	return types.MakeChannelState(cs.ChannelID, cs.Balances, cs.Version, cs.Final)
 }
 
-type ChannelID [ChannelIDLength]byte
+type ChannelID channel.ID
 
 func (cid *ChannelID) UnmarshalJSON(bytes []byte) error {
 	var hexString string
