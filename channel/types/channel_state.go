@@ -1,0 +1,93 @@
+package types
+
+import (
+	"fmt"
+	"math"
+	"math/big"
+	"perun.network/go-perun/channel"
+)
+
+var MaxBalance = new(big.Int).SetUint64(math.MaxUint64)
+
+type (
+	ID      = channel.ID
+	Balance = uint64
+	Version = uint64
+
+	// ChannelState is the cardano backend equivalent to go-perun's channel.State.
+	ChannelState struct {
+		ID       ID
+		Balances []Balance
+		Version  Version
+		Final    bool
+	}
+)
+
+func MakeChannelState(id channel.ID, balances []uint64, version uint64, final bool) ChannelState {
+	return ChannelState{
+		ID:       id,
+		Balances: balances,
+		Version:  version,
+		Final:    final,
+	}
+}
+
+func MakeAlloc(a channel.Allocation) ([]Balance, error) {
+	var err error
+	if len(a.Balances) < 1 {
+		return nil, fmt.Errorf("state has invalid balance")
+	}
+	ret := make([]uint64, len(a.Balances[0]))
+
+	if len(a.Assets) != 1 || len(a.Balances) != 1 || len(a.Locked) != 0 {
+		return ret, fmt.Errorf("allocation incompatible with this backend")
+	}
+	for i, balance := range a.Balances[0] {
+		if ret[i], err = MakeBalance(*balance); err != nil {
+			break
+		}
+	}
+	return ret, err
+}
+
+func MakeBalance(balance big.Int) (Balance, error) {
+	if balance.Sign() < 0 || balance.Cmp(MaxBalance) > 0 {
+		return 0, fmt.Errorf("invalid balance")
+	}
+	return balance.Uint64(), nil
+}
+
+func ConvertChannelState(state channel.State) (ChannelState, error) {
+	if err := state.Valid(); err != nil {
+		return ChannelState{}, fmt.Errorf("state is invalid")
+	}
+
+	balances, err := MakeAlloc(state.Allocation)
+	if err != nil {
+		return ChannelState{}, fmt.Errorf("unable to make allocation: %w", err)
+	}
+	return ChannelState{
+		ID:       state.ID,
+		Balances: balances,
+		Version:  state.Version,
+		Final:    state.IsFinal,
+	}, nil
+}
+
+func (cs ChannelState) Equal(other ChannelState) bool {
+	equal := cs.ID == other.ID &&
+		cs.Version == other.Version &&
+		cs.Final == other.Final
+	if !equal {
+		return false
+	}
+	if len(cs.Balances) != len(other.Balances) {
+		return false
+	}
+	for i, bal := range cs.Balances {
+		if bal != other.Balances[i] {
+			return false
+		}
+	}
+	return true
+}
