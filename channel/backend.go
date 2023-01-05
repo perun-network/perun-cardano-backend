@@ -4,7 +4,6 @@ import (
 	"fmt"
 	pchannel "perun.network/go-perun/channel"
 	"perun.network/go-perun/wallet"
-	"perun.network/perun-cardano-backend/blake2b224"
 	"perun.network/perun-cardano-backend/channel/types"
 	remotewallet "perun.network/perun-cardano-backend/wallet"
 )
@@ -25,17 +24,14 @@ func SetWalletBackend(remoteBackend *remotewallet.RemoteBackend) {
 
 // CalcID calculates the channel-id from the parameters.
 func (b backend) CalcID(params *pchannel.Params) pchannel.ID {
-	encodedParams, err := EncodeParams(params)
+	p, err := types.MakeChannelParameters(*params)
 	if err != nil {
-		panic(fmt.Sprintf("cannot calculate channel id: %v", err))
+		panic(err)
 	}
-	hash, err := blake2b224.Sum224(encodedParams)
+	id, err := b.walletBackend.CalculateChannelID(p)
 	if err != nil {
-		panic(fmt.Sprintf("unable to hash encoded parameters to compute channel-id: %v", err))
+		panic(err)
 	}
-	// We extend the hash with zero-padding to arrive at the 32 byte channel id used by go-perun.
-	var id pchannel.ID
-	copy(id[:blake2b224.Size224], hash[:])
 	return id
 }
 
@@ -67,12 +63,6 @@ func (b backend) Verify(addr wallet.Address, state *pchannel.State, sig wallet.S
 // representation.
 func (b backend) NewAsset() pchannel.Asset {
 	return Asset
-}
-
-// EncodeParams placeholder for parameter encoding.
-func EncodeParams(params *pchannel.Params) ([]byte, error) {
-	//TODO implement me
-	panic("implement me")
 }
 
 var Backend backend
