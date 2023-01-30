@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"perun.network/go-perun/wallet"
+	"perun.network/perun-cardano-backend/channel/types"
 	"perun.network/perun-cardano-backend/wallet/address"
 )
 
@@ -24,6 +25,20 @@ func MakeSigningRequest(address address.Address, message []byte) SigningRequest 
 	}
 }
 
+// ChannelStateSigningRequest is the json-serializable request for signing ChannelState via the perun-cardano-wallet api.
+type ChannelStateSigningRequest struct {
+	PubKey       PubKey       `json:"csPubKey"`
+	ChannelState ChannelState `json:"csState"`
+}
+
+// MakeChannelStateSigningRequest returns a new ChannelStateSigningRequest.
+func MakeChannelStateSigningRequest(address address.Address, channelState types.ChannelState) ChannelStateSigningRequest {
+	return ChannelStateSigningRequest{
+		PubKey:       MakePubKey(address),
+		ChannelState: MakeChannelState(channelState),
+	}
+}
+
 // VerificationRequest is the json serializable request for verifying via the perun-cardano-wallet api.
 type VerificationRequest struct {
 	Signature Signature `json:"vSignature"`
@@ -37,6 +52,23 @@ func MakeVerificationRequest(sig wallet.Sig, address address.Address, message []
 		Signature: MakeSignature(sig),
 		PubKey:    MakePubKey(address),
 		Message:   hex.EncodeToString(message),
+	}
+}
+
+// ChannelStateVerificationRequest is the json serializable request for verifying a signature on a ChannelState via the
+// perun-cardano-wallet api.
+type ChannelStateVerificationRequest struct {
+	Signature    Signature    `json:"cvSignature"`
+	PubKey       PubKey       `json:"cvPubKey"`
+	ChannelState ChannelState `json:"cvState"`
+}
+
+// MakeChannelStateVerificationRequest returns a new ChannelStateVerificationRequest.
+func MakeChannelStateVerificationRequest(sig wallet.Sig, address address.Address, channelState types.ChannelState) ChannelStateVerificationRequest {
+	return ChannelStateVerificationRequest{
+		Signature:    MakeSignature(sig),
+		PubKey:       MakePubKey(address),
+		ChannelState: MakeChannelState(channelState),
 	}
 }
 
