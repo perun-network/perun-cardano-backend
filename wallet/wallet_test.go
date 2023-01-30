@@ -13,7 +13,7 @@ func TestRemoteWallet_Trace(t *testing.T) {
 	r := test.NewMockRemote(rng)
 	backend := wallet.MakeRemoteBackend(r)
 	address := backend.NewAddress()
-	err := address.UnmarshalBinary(r.MockAddressBytes)
+	err := address.UnmarshalBinary(r.MockPubKeyBytes[:])
 	require.NoError(t, err, "unable to marshal binary address into Address")
 	require.Equal(t, &r.MockAddress, address, "unmarshalled address is not as expected")
 	require.NotEqual(
@@ -23,14 +23,14 @@ func TestRemoteWallet_Trace(t *testing.T) {
 		"unmarshalled address is equal to a wrong address",
 	)
 
-	err = backend.NewAddress().UnmarshalBinary(r.InvalidAddressBytes)
+	err = backend.NewAddress().UnmarshalBinary(r.InvalidPubKeyBytes)
 	require.Error(t, err, "unmarshalled invalid binary address into Address")
 
 	binaryAddress, err := address.MarshalBinary()
-	require.NoError(t, err, "unable to marshal valid address Address into binary")
+	require.NoError(t, err, "unable to marshal valid Address into binary")
 	require.Equal(
 		t,
-		r.MockAddressBytes,
+		r.MockPubKeyBytes[:],
 		binaryAddress,
 		"marshalled Address is not as expected",
 	)

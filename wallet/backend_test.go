@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/require"
 	"io"
-	"math/rand"
 	"perun.network/perun-cardano-backend/wallet"
+	"perun.network/perun-cardano-backend/wallet/address"
 	"perun.network/perun-cardano-backend/wallet/test"
+	"perun.network/perun-cardano-backend/wire"
 	pkgtest "polycry.pt/poly-go/test"
 	"testing"
 )
@@ -17,7 +18,7 @@ func TestBackend_NewAddress(t *testing.T) {
 	r := test.NewMockRemote(rng)
 	uut := wallet.MakeRemoteBackend(r)
 	actualAddress := uut.NewAddress()
-	_, ok := actualAddress.(*wallet.Address)
+	_, ok := actualAddress.(*address.Address)
 	require.True(t, ok, "NewAddress() does not return an Address")
 }
 
@@ -33,8 +34,7 @@ func TestBackend_DecodeSig(t *testing.T) {
 	require.NoError(t, err, "received an error when decoding signature")
 	require.Equal(t, r.MockSignature, actualSig, "decoded signature is incorrect")
 
-	randomBytes := make([]byte, rand.Intn(maxRandomBytesLength+1))
-	rand.Read(randomBytes)
+	randomBytes := test.GetRandomByteSlice(0, maxRandomBytesLength, rng)
 	readerLonger := bytes.NewReader(append(r.MockSignature, randomBytes...))
 	actualSig, err = uut.DecodeSig(readerLonger)
 	require.NoError(t, err, "received an error when decoding signature")
@@ -44,14 +44,14 @@ func TestBackend_DecodeSig(t *testing.T) {
 		t,
 		err,
 		"only one signature (%d bytes) should be read from given reader",
-		wallet.SignatureLength,
+		wire.SignatureLength,
 	)
 	require.Equalf(
 		t,
 		randomBytes,
 		rest,
 		"only one signature (%d bytes) should be read from given reader. No more should be read from the reader",
-		wallet.SignatureLength,
+		wire.SignatureLength,
 	)
 
 	invalidReader := bytes.NewReader(r.InvalidSignatureShorter)
