@@ -37,7 +37,7 @@ func (b backend) CalcID(params *pchannel.Params) pchannel.ID {
 
 // Sign signs the given state with the given account.
 func (b backend) Sign(account wallet.Account, state *pchannel.State) (wallet.Sig, error) {
-	remoteAccount, ok := account.(*remotewallet.RemoteAccount)
+	remoteAccount, ok := account.(remotewallet.RemoteAccount)
 	if !ok {
 		return nil, fmt.Errorf("unable to cast Account to RemoteAccount")
 	}
