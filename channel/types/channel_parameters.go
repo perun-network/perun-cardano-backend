@@ -31,3 +31,21 @@ func MakeChannelParameters(params channel.Params) (ChannelParameters, error) {
 		Timeout: time.Duration(params.ChallengeDuration) * time.Second,
 	}, nil
 }
+
+func (cp ChannelParameters) Equal(other ChannelParameters) bool {
+	if cp.Timeout != other.Timeout {
+		return false
+	}
+	if cp.Nonce.Cmp(other.Nonce) != 0 {
+		return false
+	}
+	if len(cp.Parties) != len(other.Parties) {
+		return false
+	}
+	for i, party := range cp.Parties {
+		if !party.Equal(&other.Parties[i]) {
+			return false
+		}
+	}
+	return true
+}
