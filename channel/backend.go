@@ -14,11 +14,11 @@ import (
 // The current version of backend needs to use our wallet.RemoteBackend implementation.
 // This is a workaround that makes encoding state for signing and verifying possible.
 type backend struct {
-	walletBackend *remotewallet.RemoteBackend
+	walletBackend remotewallet.RemoteBackend
 }
 
 // SetWalletBackend needs to be called initially.
-func SetWalletBackend(remoteBackend *remotewallet.RemoteBackend) {
+func SetWalletBackend(remoteBackend remotewallet.RemoteBackend) {
 	Backend = backend{walletBackend: remoteBackend}
 }
 
