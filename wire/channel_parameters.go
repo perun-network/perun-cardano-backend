@@ -43,7 +43,7 @@ func MakeChannelParameters(parameters types.ChannelParameters) ChannelParameters
 		signingPubKeys[i] = MakePaymentPubKey(addr)
 	}
 	return ChannelParameters{
-		Nonce:               parameters.Nonce,
+		Nonce:               new(big.Int).Set(parameters.Nonce),
 		PaymentPubKeyHashes: pubKeyHashes,
 		SigningPubKeys:      signingPubKeys,
 		TimeLock:            parameters.Timeout.Milliseconds(),
