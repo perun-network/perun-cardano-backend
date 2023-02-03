@@ -2,6 +2,7 @@ package types
 
 import (
 	"fmt"
+	"math/big"
 	"perun.network/go-perun/channel"
 	"perun.network/perun-cardano-backend/wallet/address"
 	"time"
@@ -26,7 +27,7 @@ func MakeChannelParameters(params channel.Params) (ChannelParameters, error) {
 	}
 	return ChannelParameters{
 		Parties: parties,
-		Nonce:   params.Nonce,
+		Nonce:   new(big.Int).Set(params.Nonce),
 		Timeout: time.Duration(params.ChallengeDuration) * time.Second,
 	}, nil
 }
