@@ -16,13 +16,11 @@ package test
 
 import (
 	"math/rand"
-	gpchannel "perun.network/go-perun/channel"
 	"perun.network/perun-cardano-backend/channel/types"
 )
 
 func MakeRandomChannelState(rng *rand.Rand) types.ChannelState {
-	var channelID = gpchannel.ID{}
-	rng.Read(channelID[:])
+	channelID := MakeRandomChannelID(rng)
 	balances := []uint64{rng.Uint64(), rng.Uint64()}
 	version := rng.Uint64()
 	final := rng.Intn(2) == 1
