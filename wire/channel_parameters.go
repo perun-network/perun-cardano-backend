@@ -2,9 +2,11 @@ package wire
 
 import (
 	"encoding/hex"
+	"math/big"
 	"perun.network/go-perun/channel"
 	"perun.network/perun-cardano-backend/channel/types"
 	"perun.network/perun-cardano-backend/wallet/address"
+	"time"
 )
 
 // ChannelParameters reflects the Haskell type `Channel` of the Channel Smart Contract in respect to its json encoding.
@@ -59,4 +61,20 @@ func MakePaymentPubKeyHash(address address.Address) PaymentPubKeyHash {
 			Hex: hex.EncodeToString(hash[:]),
 		},
 	}
+}
+
+func (cp ChannelParameters) Decode() (types.ChannelParameters, error) {
+	parties := make([]address.Address, len(cp.SigningPubKeys))
+	for i, ppk := range cp.SigningPubKeys {
+		addr, err := ppk.PubKey.Decode()
+		if err != nil {
+			return types.ChannelParameters{}, err
+		}
+		parties[i] = addr
+	}
+	return types.ChannelParameters{
+		Parties: parties,
+		Nonce:   new(big.Int).Set(cp.Nonce),
+		Timeout: time.Duration(cp.TimeLock) * time.Millisecond,
+	}, nil
 }
