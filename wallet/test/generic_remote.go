@@ -20,12 +20,38 @@ import (
 	"fmt"
 	"math/rand"
 	gpwallet "perun.network/go-perun/wallet"
+	"perun.network/perun-cardano-backend/channel/test"
 	"perun.network/perun-cardano-backend/channel/types"
 	"perun.network/perun-cardano-backend/wallet"
 	"perun.network/perun-cardano-backend/wallet/address"
 	"perun.network/perun-cardano-backend/wire"
 	"polycry.pt/poly-go/sync"
 )
+
+type channelIDOracle struct {
+	lock       sync.Mutex
+	parameters []types.ChannelParameters
+	ids        []types.ID
+}
+
+var ChannelIDOracle = &channelIDOracle{
+	parameters: []types.ChannelParameters{},
+	ids:        []types.ID{},
+}
+
+func (o *channelIDOracle) GetChannelID(params types.ChannelParameters, rng *rand.Rand) types.ID {
+	o.lock.Lock()
+	defer o.lock.Unlock()
+	for i, p := range o.parameters {
+		if p.Equal(params) {
+			return o.ids[i]
+		}
+	}
+	o.parameters = append([]types.ChannelParameters{params}, o.parameters...)
+	id := test.MakeRandomChannelID(rng)
+	o.ids = append([]types.ID{id}, o.ids...)
+	return id
+}
 
 type validSignatures struct {
 	DataLock                    sync.Mutex
@@ -109,6 +135,8 @@ func (d ChannelStateSignature) Equal(other ChannelStateSignature) bool {
 // Signatures are generated randomly and all valid signature t-tuples are collected globally
 // in ValidSignatures. This means that GenericRemote verifies a signature as valid, iff it has been signed by ANY
 // Generic remote before.
+// GenericRemote uses the ChannelIDOracle to come up with a random channel id that is then fixed to that
+// ChannelParameters.
 type GenericRemote struct {
 	AvailableAddress address.Address
 	rng              *rand.Rand
@@ -191,6 +219,16 @@ func makeGenericCallEndpointDefault(g *GenericRemote) func(string, interface{}, 
 				return fmt.Errorf("unable to cast response to VerificationResponse")
 			}
 			return g.endpointVerifyChannelStateSignature(request, response)
+		case wallet.EndpointCalculateChannelID:
+			request, ok := req.(wire.ChannelParameters)
+			if !ok {
+				return fmt.Errorf("unable to cast request to ChannelParameters")
+			}
+			response, ok := resp.(*wire.ChannelID)
+			if !ok {
+				return fmt.Errorf("unable to cast response to ChannelID")
+			}
+			return g.endpointCalculateChannelID(request, response)
 		default:
 			return fmt.Errorf("invalid endpoint: %s", endpoint)
 		}
@@ -280,5 +318,17 @@ func (g *GenericRemote) endpointVerifyChannelStateSignature(request wire.Channel
 		Signature:    sig,
 		ChannelState: state,
 	})
+	return nil
+}
+
+func (g *GenericRemote) endpointCalculateChannelID(request wire.ChannelParameters, response *wire.ChannelID) error {
+	params, err := request.Decode()
+	if err != nil {
+		return fmt.Errorf("unable to decode the parameters")
+	}
+	g.mutex.Lock()
+	id := ChannelIDOracle.GetChannelID(params, g.rng)
+	g.mutex.Unlock()
+	*response = id
 	return nil
 }
