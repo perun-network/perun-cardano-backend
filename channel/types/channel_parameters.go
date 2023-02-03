@@ -16,7 +16,15 @@ type ChannelParameters struct {
 }
 
 func MakeChannelParameters(params channel.Params) (ChannelParameters, error) {
-	// TODO assert that the params are valid for the current state of the Cardano backend (e.g. no virtual channels)
+	if params.App != channel.NoApp() {
+		return ChannelParameters{}, fmt.Errorf("the backend does not support an app in parameters")
+	}
+	if params.VirtualChannel {
+		return ChannelParameters{}, fmt.Errorf("the backend does not support Virtual Channels")
+	}
+	if !params.LedgerChannel {
+		return ChannelParameters{}, fmt.Errorf("the backend only supports Ledger Channels")
+	}
 	parties := make([]address.Address, len(params.Parts))
 	for i, party := range params.Parts {
 		addr, ok := party.(*address.Address)
