@@ -24,6 +24,9 @@ func SetWalletBackend(remoteBackend remotewallet.RemoteBackend) {
 
 // CalcID calculates the channel-id from the parameters.
 func (b backend) CalcID(params *pchannel.Params) pchannel.ID {
+	if params == nil {
+		panic("params must not be nil for channel id calculation")
+	}
 	p, err := types.MakeChannelParameters(*params)
 	if err != nil {
 		panic(err)
@@ -37,6 +40,12 @@ func (b backend) CalcID(params *pchannel.Params) pchannel.ID {
 
 // Sign signs the given state with the given account.
 func (b backend) Sign(account wallet.Account, state *pchannel.State) (wallet.Sig, error) {
+	if account == nil {
+		return nil, fmt.Errorf("account must not be nil for signing")
+	}
+	if state == nil {
+		return nil, fmt.Errorf("state must not be nil for signing")
+	}
 	remoteAccount, ok := account.(remotewallet.RemoteAccount)
 	if !ok {
 		return nil, fmt.Errorf("unable to cast Account to RemoteAccount")
@@ -52,6 +61,15 @@ func (b backend) Sign(account wallet.Account, state *pchannel.State) (wallet.Sig
 
 // Verify returns true, iff the signature is correct for the given state and address.
 func (b backend) Verify(addr wallet.Address, state *pchannel.State, sig wallet.Sig) (bool, error) {
+	if addr == nil {
+		return false, fmt.Errorf("address must not be nil for verification")
+	}
+	if state == nil {
+		return false, fmt.Errorf("state must not be nil for verification")
+	}
+	if sig == nil {
+		return false, fmt.Errorf("signature must not be nil for verification")
+	}
 	channelState, err := types.ConvertChannelState(*state)
 	if err != nil {
 		return false, fmt.Errorf("unable to encode state for verifying: %w", err)
