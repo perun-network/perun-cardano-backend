@@ -14,21 +14,16 @@ const (
 
 type (
 	Deposited struct {
-		FundingIndex int
-		Balances     []Balance
 		ChannelID    ID
+		ChannelDatum ChannelDatum
 	}
 	Disputed struct {
-		ChannelParameters ChannelParameters
-		ChannelState      ChannelState
-		ChannelID         ID
-		VersionNumber     Version
-		ChannelTimeout    channel.Timeout
+		ChannelID    ID
+		ChannelDatum ChannelDatum
 	}
 	Progressed struct {
-		ChannelID      ID
-		VersionNumber  Version
-		ChannelTimeout channel.Timeout
+		ChannelID    ID
+		ChannelDatum ChannelDatum
 	}
 	Concluded struct {
 		ChannelID ID
@@ -67,11 +62,11 @@ func (p Progressed) ID() channel.ID {
 }
 
 func (p Progressed) Timeout() channel.Timeout {
-	return p.ChannelTimeout
+	return &channel.TimeTimeout{Time: p.ChannelDatum.Time.Add(p.ChannelDatum.ChannelParameters.Timeout)}
 }
 
 func (p Progressed) Version() uint64 {
-	return p.VersionNumber
+	return p.ChannelDatum.ChannelState.Version
 }
 
 func (d Disputed) ID() channel.ID {
@@ -79,11 +74,11 @@ func (d Disputed) ID() channel.ID {
 }
 
 func (d Disputed) Timeout() channel.Timeout {
-	return d.ChannelTimeout
+	return &channel.TimeTimeout{Time: d.ChannelDatum.Time.Add(d.ChannelDatum.ChannelParameters.Timeout)}
 }
 
 func (d Disputed) Version() uint64 {
-	return d.VersionNumber
+	return d.ChannelDatum.ChannelState.Version
 }
 
 func (d Deposited) ID() channel.ID {

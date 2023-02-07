@@ -79,35 +79,38 @@ func decodeEvent(event wire.Event, id types.ID) (gpchannel.AdjudicatorEvent, err
 		if len(event.ChannelDatum) != 1 {
 			return nil, fmt.Errorf("invalid amout of ChannelDatums received in event. Amout: %d", len(event.ChannelDatum))
 		}
-		datum := event.ChannelDatum[0]
+		datum, err := event.ChannelDatum[0].Decode()
+		if err != nil {
+			return nil, err
+		}
 		return types.Deposited{
-			FundingIndex: -1, // TODO: calculate funding index
-			Balances:     datum.Funding,
 			ChannelID:    id,
+			ChannelDatum: datum,
 		}, nil
 	case types.DisputedTag:
 		if len(event.ChannelDatum) != 1 {
 			return nil, fmt.Errorf("invalid amout of ChannelDatums received in event. Amout: %d", len(event.ChannelDatum))
 		}
-		datum := event.ChannelDatum[0]
-		parameters, err := datum.ChannelParameters.Decode()
+		datum, err := event.ChannelDatum[0].Decode()
 		if err != nil {
 			return nil, err
 		}
-		state := datum.ChannelState.Decode()
 		return types.Disputed{
-			ChannelParameters: parameters,
-			ChannelState:      state,
-			ChannelID:         id,
-			VersionNumber:     state.Version,
-			ChannelTimeout:    &gpchannel.TimeTimeout{Time: datum.Time.Add(parameters.Timeout)},
+			ChannelID:    id,
+			ChannelDatum: datum,
 		}, nil
 	case types.ProgressedTag:
 		// TODO: Figure out what Progressed Events do?
+		if len(event.ChannelDatum) != 1 {
+			return nil, fmt.Errorf("invalid amout of ChannelDatums received in event. Amout: %d", len(event.ChannelDatum))
+		}
+		datum, err := event.ChannelDatum[0].Decode()
+		if err != nil {
+			return nil, err
+		}
 		return types.Progressed{
-			ChannelID:      id,
-			VersionNumber:  0,
-			ChannelTimeout: nil,
+			ChannelID:    id,
+			ChannelDatum: datum,
 		}, nil
 	case types.ConcludedTag:
 		return types.Concluded{ChannelID: id}, nil
