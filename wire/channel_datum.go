@@ -7,11 +7,12 @@ import (
 
 type ChannelDatum struct {
 	ChannelParameters ChannelParameters `json:"channelParameters"`
-	ChannelState      ChannelState      `json:"state"`
-	Time              time.Time         `json:"time"`
-	Funding           []uint64          `json:"funding"`
-	Funded            bool              `json:"funded"`
+	ChannelToken      ChannelToken      `json:"channelToken"`
 	Disputed          bool              `json:"disputed"`
+	Funded            bool              `json:"funded"`
+	Funding           []uint64          `json:"funding"`
+	ChannelState      ChannelState      `json:"state"`
+	Time              int64             `json:"time"`
 }
 
 func (c ChannelDatum) Decode() (types.ChannelDatum, error) {
@@ -21,10 +22,23 @@ func (c ChannelDatum) Decode() (types.ChannelDatum, error) {
 	}
 	return types.ChannelDatum{
 		ChannelParameters: p,
+		ChannelToken:      c.ChannelToken.Decode(),
 		ChannelState:      c.ChannelState.Decode(),
-		Time:              c.Time,
+		Time:              time.UnixMilli(c.Time),
 		FundingBalances:   c.Funding,
 		Funded:            c.Funded,
 		Disputed:          c.Disputed,
 	}, nil
+}
+
+func MakeChannelDatum(datum types.ChannelDatum) ChannelDatum {
+	return ChannelDatum{
+		ChannelParameters: MakeChannelParameters(datum.ChannelParameters),
+		ChannelToken:      MakeChannelToken(datum.ChannelToken),
+		ChannelState:      MakeChannelState(datum.ChannelState),
+		Time:              datum.Time.UnixMilli(),
+		Funding:           datum.FundingBalances,
+		Funded:            datum.Funded,
+		Disputed:          datum.Disputed,
+	}
 }
