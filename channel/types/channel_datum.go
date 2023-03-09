@@ -4,6 +4,7 @@ import "time"
 
 type ChannelDatum struct {
 	ChannelParameters ChannelParameters
+	ChannelToken      ChannelToken
 	ChannelState      ChannelState
 	Time              time.Time
 	FundingBalances   []Balance
