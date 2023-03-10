@@ -89,6 +89,18 @@ func (a AdjudicatorSub) Close() error {
 
 func decodeEvent(event wire.Event, id types.ID) (gpchannel.AdjudicatorEvent, error) {
 	switch event.Tag {
+	case types.StartedTag:
+		if len(event.ChannelDatum) != 1 {
+			return nil, fmt.Errorf("invalid amout of ChannelDatums received in event. Amout: %d", len(event.ChannelDatum))
+		}
+		datum, err := event.ChannelDatum[0].Decode()
+		if err != nil {
+			return nil, err
+		}
+		return types.Started{
+			ChannelID:    id,
+			ChannelDatum: datum,
+		}, nil
 	case types.DepositedTag:
 		if len(event.ChannelDatum) != 1 {
 			return nil, fmt.Errorf("invalid amout of ChannelDatums received in event. Amout: %d", len(event.ChannelDatum))
