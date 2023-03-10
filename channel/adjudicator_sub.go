@@ -24,6 +24,8 @@ import (
 	"perun.network/perun-cardano-backend/wire"
 )
 
+// AdjudicatorSub is a subscription to the Adjudicator events.
+// Instances should only be created using PAB.NewSubscription.
 type AdjudicatorSub struct {
 	eventQueue chan wire.Event
 	connection *websocket.Conn
@@ -31,8 +33,8 @@ type AdjudicatorSub struct {
 	ChannelID  types.ID
 }
 
-func NewAdjudicatorSub(pabUrl url.URL, id types.ID) (*AdjudicatorSub, error) {
-	conn, _, err := websocket.DefaultDialer.Dial(pabUrl.String(), nil)
+func newAdjudicatorSub(contractUrl *url.URL, id types.ID) (*AdjudicatorSub, error) {
+	conn, _, err := websocket.DefaultDialer.Dial(contractUrl.String(), nil)
 	if err != nil {
 		return nil, errors.New("unable to establish connection to PAB")
 	}
