@@ -2,6 +2,7 @@ package wire
 
 import (
 	"perun.network/go-perun/channel"
+	"perun.network/go-perun/wallet"
 	"perun.network/perun-cardano-backend/channel/types"
 )
 
@@ -86,15 +87,15 @@ func MakeOpenParams(id ChannelID, p types.ChannelParameters, s types.ChannelStat
 }
 
 type FundParams struct {
-	ChannelID    ChannelID    `json:"fpChannelId"`
-	ChannelToken ChannelToken `json:"fpChannelToken"`
-	Index        uint16       `json:"fpIndex"`
+	ChannelID    ChannelID  `json:"fpChannelId"`
+	ChannelToken AssetClass `json:"fpChannelToken"`
+	Index        uint16     `json:"fpIndex"`
 }
 
 func MakeFundParams(id ChannelID, token types.ChannelToken, index uint16) FundParams {
 	return FundParams{
 		ChannelID:    id,
-		ChannelToken: MakeChannelToken(token),
+		ChannelToken: MakeAssetClass(token),
 		Index:        index,
 	}
 }
@@ -104,9 +105,20 @@ type StateSignatures struct {
 	Signatures   []Signature  `json:"aSignatures"`
 }
 
+func MakeStateSignatures(state types.ChannelState, sigs []wallet.Sig) StateSignatures {
+	ws := make([]Signature, len(sigs))
+	for i, s := range sigs {
+		ws[i] = MakeSignature(s)
+	}
+	return StateSignatures{
+		ChannelState: MakeChannelState(state),
+		Signatures:   ws,
+	}
+}
+
 type DisputeParams struct {
 	ChannelID      ChannelID       `json:"dpChannelId"`
-	ChannelToken   ChannelToken    `json:"dpChannelToken"`
+	ChannelToken   AssetClass      `json:"dpChannelToken"`
 	SignedState    StateSignatures `json:"dpSignedState"`
 	SigningPubKeys []PaymentPubKey `json:"dpSigningPKs"`
 }
@@ -114,11 +126,22 @@ type DisputeParams struct {
 type CloseParams struct {
 	SigningPubKeys []PaymentPubKey `json:"cpSigningPKs"`
 	SignedState    StateSignatures `json:"cpSignedState"`
-	ChannelToken   ChannelToken    `json:"cpChannelToken"`
+	ChannelToken   AssetClass      `json:"cpChannelToken"`
 	ChannelID      ChannelID       `json:"cpChannelId"`
 }
 
+func MakeCloseParams(id ChannelID, token types.ChannelToken, params types.ChannelParameters, state types.ChannelState, sigs []wallet.Sig) CloseParams {
+	wp := MakeChannelParameters(params)
+
+	return CloseParams{
+		SigningPubKeys: wp.SigningPubKeys,
+		SignedState:    MakeStateSignatures(state, sigs),
+		ChannelToken:   MakeAssetClass(token),
+		ChannelID:      id,
+	}
+}
+
 type ForceCloseParams struct {
-	ChannelToken ChannelToken `json:"fcpChannelToken"`
-	ChannelID    ChannelID    `json:"fcpChannelId"`
+	ChannelToken AssetClass `json:"fcpChannelToken"`
+	ChannelID    ChannelID  `json:"fcpChannelId"`
 }
