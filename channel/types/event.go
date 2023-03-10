@@ -17,6 +17,7 @@ package types
 import "perun.network/go-perun/channel"
 
 const (
+	StartedTag    = "Started"
 	DepositedTag  = "Deposited"
 	DisputedTag   = "Disputed"
 	ProgressedTag = "Progressed"
@@ -27,6 +28,10 @@ const (
 // TODO: Figure out what to return on AdjudicatorEvent.Version(), if there is no concept of a state version for that event
 
 type (
+	Started struct {
+		ChannelID    ID
+		ChannelDatum ChannelDatum
+	}
 	Deposited struct {
 		ChannelID    ID
 		ChannelDatum ChannelDatum
@@ -104,5 +109,17 @@ func (d Deposited) Timeout() channel.Timeout {
 }
 
 func (d Deposited) Version() uint64 {
+	return 0
+}
+
+func (s Started) ID() channel.ID {
+	return s.ChannelID
+}
+
+func (s Started) Timeout() channel.Timeout {
+	return nil
+}
+
+func (s Started) Version() uint64 {
 	return 0
 }
