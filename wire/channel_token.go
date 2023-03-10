@@ -14,16 +14,15 @@
 
 package wire
 
-import "perun.network/perun-cardano-backend/channel/types"
+import (
+	"encoding/json"
+	"perun.network/perun-cardano-backend/channel/types"
+)
 
 type ChannelToken struct {
-	CtName struct {
-		UnTokenName string `json:"unTokenName"`
-	} `json:"ctName"`
-	CtSymbol struct {
-		UnCurrencySymbol string `json:"unCurrencySymbol"`
-	} `json:"ctSymbol"`
-	CtTxOutRef struct {
+	TokenName      TokenName      `json:"ctName"`
+	CurrencySymbol CurrencySymbol `json:"ctSymbol"`
+	CtTxOutRef     struct {
 		TxOutRefId struct {
 			GetTxId string `json:"getTxId"`
 		} `json:"txOutRefId"`
@@ -31,10 +30,34 @@ type ChannelToken struct {
 	} `json:"ctTxOutRef"`
 }
 
+type TokenName struct {
+	Name string `json:"unTokenName"`
+}
+
+type CurrencySymbol struct {
+	Symbol string `json:"unCurrencySymbol"`
+}
+
+type AssetClass struct {
+	CurrencySymbol string `json:"unCurrencySymbol"`
+	TokenName      string `json:"unTokenName"`
+}
+
+func (a AssetClass) MarshalJSON() ([]byte, error) {
+	return json.Marshal([]interface{}{a.CurrencySymbol, a.TokenName})
+}
+
+func MakeAssetClass(token types.ChannelToken) AssetClass {
+	return AssetClass{
+		CurrencySymbol: token.TokenSymbol,
+		TokenName:      token.TokenName,
+	}
+}
+
 func (t ChannelToken) Decode() types.ChannelToken {
 	return types.ChannelToken{
-		TokenName:   t.CtName.UnTokenName,
-		TokenSymbol: t.CtSymbol.UnCurrencySymbol,
+		TokenName:   t.TokenName.Name,
+		TokenSymbol: t.CurrencySymbol.Symbol,
 		TxOutRef: types.TxOutRef{
 			TxID:  t.CtTxOutRef.TxOutRefId.GetTxId,
 			Index: t.CtTxOutRef.TxOutRefIdx,
@@ -44,15 +67,11 @@ func (t ChannelToken) Decode() types.ChannelToken {
 
 func MakeChannelToken(token types.ChannelToken) ChannelToken {
 	return ChannelToken{
-		CtName: struct {
-			UnTokenName string `json:"unTokenName"`
-		}{
-			UnTokenName: token.TokenName,
+		TokenName: TokenName{
+			Name: token.TokenName,
 		},
-		CtSymbol: struct {
-			UnCurrencySymbol string `json:"unCurrencySymbol"`
-		}{
-			UnCurrencySymbol: token.TokenSymbol,
+		CurrencySymbol: CurrencySymbol{
+			Symbol: token.TokenSymbol,
 		},
 		CtTxOutRef: struct {
 			TxOutRefId struct {
