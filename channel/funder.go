@@ -14,35 +14,39 @@ var (
 )
 
 type Funder struct {
-	sub *AdjudicatorSub
 	pab *PAB
 }
 
-func NewFunder(sub *AdjudicatorSub, pab *PAB) *Funder {
+func NewFunder(pab *PAB) *Funder {
 	return &Funder{
-		sub: sub,
 		pab: pab,
 	}
 }
 
 func (f Funder) Fund(ctx context.Context, req channel.FundingReq) error {
-	params, err := types.MakeChannelParameters(*req.Params)
+	sub, err := f.pab.NewSubscription(req.Params.ID())
+	defer sub.Close()
+
+	if err != nil {
+		return fmt.Errorf("unable to create subscription: %w", err)
+	}
+	params, err := types.MakeChannelParameters(*req.Params.Clone())
 	if err != nil {
 		return fmt.Errorf("unable to convert channel parameters for funding: %w", err)
 	}
-	state, err := types.ConvertChannelState(*req.State)
+	state, err := types.ConvertChannelState(*req.State.Clone())
 	if err != nil {
 		return fmt.Errorf("unable to convert channel state for funding: %w", err)
 	}
 
 	for i := uint16(0); i < uint16(req.Idx); i++ {
 		if i == 0 {
-			err = f.ExpectAndHandleStartEvent(req.Params.ID())
+			err = f.ExpectAndHandleStartEvent(req.Params.ID(), sub)
 			if err != nil {
 				return err
 			}
 		} else {
-			err = f.ExpectAndHandleDepositedEvent(req.Params.ID())
+			err = f.ExpectAndHandleDepositedEvent(req.Params.ID(), sub)
 			if err != nil {
 				return err
 			}
@@ -53,7 +57,7 @@ func (f Funder) Fund(ctx context.Context, req channel.FundingReq) error {
 		if err != nil {
 			return err
 		}
-		err = f.ExpectAndHandleStartEvent(req.Params.ID())
+		err = f.ExpectAndHandleStartEvent(req.Params.ID(), sub)
 		if err != nil {
 			return err
 		}
@@ -63,14 +67,14 @@ func (f Funder) Fund(ctx context.Context, req channel.FundingReq) error {
 		if err != nil {
 			return err
 		}
-		err = f.ExpectAndHandleDepositedEvent(req.Params.ID())
+		err = f.ExpectAndHandleDepositedEvent(req.Params.ID(), sub)
 		if err != nil {
 			return err
 		}
 	}
 
 	for i := int(req.Idx); i < len(params.Parties); i++ {
-		err = f.ExpectAndHandleDepositedEvent(req.Params.ID())
+		err = f.ExpectAndHandleDepositedEvent(req.Params.ID(), sub)
 		if err != nil {
 			return err
 		}
@@ -78,8 +82,8 @@ func (f Funder) Fund(ctx context.Context, req channel.FundingReq) error {
 	return nil
 }
 
-func (f Funder) ExpectAndHandleStartEvent(id types.ID) error {
-	event := f.sub.Next()
+func (f Funder) ExpectAndHandleStartEvent(id types.ID, sub *AdjudicatorSub) error {
+	event := sub.Next()
 	if event.ID() != id {
 		return MismatchingChannelIDError
 	}
@@ -96,8 +100,8 @@ func (f Funder) ExpectAndHandleStartEvent(id types.ID) error {
 	//TODO: Verify & Check Start event
 }
 
-func (f Funder) ExpectAndHandleDepositedEvent(id types.ID) error {
-	event := f.sub.Next()
+func (f Funder) ExpectAndHandleDepositedEvent(id types.ID, sub *AdjudicatorSub) error {
+	event := sub.Next()
 	if event.ID() != id {
 		return MismatchingChannelIDError
 	}
