@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"perun.network/go-perun/channel"
+	gpwallet "perun.network/go-perun/wallet"
 	"perun.network/perun-cardano-backend/channel/types"
 	"perun.network/perun-cardano-backend/wallet"
 	"perun.network/perun-cardano-backend/wire"
@@ -21,6 +22,7 @@ const (
 	WebSocketEndpoint   = "/ws"
 	StartEndpointFormat = InstanceEndpoint + "/%s/endpoint/start"
 	FundEndpointFormat  = InstanceEndpoint + "/%s/endpoint/fund"
+	CloseEndpointFormat = InstanceEndpoint + "/%s/endpoint/close"
 )
 
 type PAB struct {
@@ -172,8 +174,13 @@ func (p *PAB) Dispute() {
 	//TODO
 }
 
-func (p *PAB) Close() {
-	//TODO
+func (p *PAB) Close(id channel.ID, params types.ChannelParameters, state types.ChannelState, sigs []gpwallet.Sig) error {
+	ct, err := p.GetChannelToken(id)
+	if err != nil {
+		return fmt.Errorf("failed to close channel: %w", err)
+	}
+	request := wire.MakeCloseParams(id, ct, params, state, sigs)
+	return p.pabRemote.CallEndpoint(fmt.Sprintf(CloseEndpointFormat, p.contractInstanceID), request, nil)
 }
 
 func (p *PAB) ForceClose() {
