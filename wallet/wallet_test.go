@@ -51,7 +51,7 @@ func TestRemoteWallet_Trace(t *testing.T) {
 		"marshalled Address is not as expected",
 	)
 
-	w := wallet.NewRemoteWallet(r)
+	w := test.NewRemoteWallet(r)
 	account, err := w.Unlock(address)
 	require.NoError(t, err, "failed to unlock valid address")
 
@@ -80,7 +80,7 @@ func TestRemoteWallet_Trace(t *testing.T) {
 func TestRemoteWallet_Unlock(t *testing.T) {
 	rng := pkgtest.Prng(t)
 	r := test.NewMockRemote(rng)
-	w := wallet.NewRemoteWallet(r)
+	w := test.NewRemoteWallet(r)
 	account, err := w.Unlock(&r.MockAddress)
 	require.NoError(t, err, "unable to unlock available address")
 	require.Equal(t, &r.MockAddress, account.Address(), "wrong address in account")
@@ -100,7 +100,7 @@ func TestRemoteWallet_Unlock(t *testing.T) {
 
 func setup(rng *rand.Rand) *gptest.Setup {
 	r := test.NewGenericRemote(test.MakeRandomAddress(rng), rng)
-	w := wallet.NewRemoteWallet(r)
+	w := test.NewRemoteWallet(r)
 	b := wallet.MakeRemoteBackend(r)
 	marshalledAddress, err := test.MakeRandomAddress(rng).MarshalBinary()
 	if err != nil {

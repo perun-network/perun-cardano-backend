@@ -30,7 +30,7 @@ import (
 
 func setup(rng *rand.Rand) *gptest.Setup {
 
-	w := wallet.NewRemoteWallet(GenericTestRemote)
+	w := test.NewRemoteWallet(GenericTestRemote)
 	acc, err := w.Unlock(&GenericTestRemote.AvailableAddress)
 	newRandomAddress := func() gpwallet.Address {
 		rAddr := test.MakeRandomAddress(rng)
