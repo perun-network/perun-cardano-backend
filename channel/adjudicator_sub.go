@@ -15,6 +15,7 @@
 package channel
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/gorilla/websocket"
@@ -49,9 +50,9 @@ func newAdjudicatorSub(contractUrl *url.URL, id types.ID) (*AdjudicatorSub, erro
 }
 
 func receiveEvents(a *AdjudicatorSub) {
-	var event wire.Event
+	var message wire.SubscriptionMessage
 	for {
-		err := a.connection.ReadJSON(&event)
+		err := a.connection.ReadJSON(&message)
 		if err != nil {
 			a.lastError <- err
 			close(a.eventQueue)
@@ -59,7 +60,21 @@ func receiveEvents(a *AdjudicatorSub) {
 			_ = a.connection.Close()
 			return
 		}
-		a.eventQueue <- event
+		if message.Tag != wire.EventMessageTag {
+			continue
+		}
+		var events []wire.Event
+		err = json.Unmarshal(message.Contents, &events)
+		if err != nil {
+			a.lastError <- fmt.Errorf("malformed event message: %w", err)
+			close(a.eventQueue)
+			close(a.lastError)
+			_ = a.connection.Close()
+			return
+		}
+		for _, e := range events {
+			a.eventQueue <- e
+		}
 	}
 }
 
@@ -90,60 +105,66 @@ func (a AdjudicatorSub) Close() error {
 }
 
 func decodeEvent(event wire.Event, id types.ID) (gpchannel.AdjudicatorEvent, error) {
+	const errorFormat = "invalid amount of ChannelDatums received in %s event. Expected: %d, Actual: %d"
 	switch event.Tag {
-	case types.StartedTag:
-		if len(event.ChannelDatum) != 1 {
-			return nil, fmt.Errorf("invalid amout of ChannelDatums received in event. Amout: %d", len(event.ChannelDatum))
+	case types.CreatedTag:
+		if len(event.DatumList) != 1 {
+			return nil, fmt.Errorf(errorFormat, types.CreatedTag, 1, len(event.DatumList))
 		}
-		datum, err := event.ChannelDatum[0].Decode()
+		datum, err := event.DatumList[0].Decode()
 		if err != nil {
 			return nil, err
 		}
-		return types.Started{
-			ChannelID:    id,
-			ChannelDatum: datum,
+		return types.Created{
+			ChannelID: id,
+			NewDatum:  datum,
 		}, nil
 	case types.DepositedTag:
-		if len(event.ChannelDatum) != 1 {
-			return nil, fmt.Errorf("invalid amout of ChannelDatums received in event. Amout: %d", len(event.ChannelDatum))
+		if len(event.DatumList) != 2 {
+			return nil, fmt.Errorf(errorFormat, types.DepositedTag, 2, len(event.DatumList))
 		}
-		datum, err := event.ChannelDatum[0].Decode()
+		oldDatum, err := event.DatumList[0].Decode()
+		if err != nil {
+			return nil, err
+		}
+		newDatum, err := event.DatumList[1].Decode()
 		if err != nil {
 			return nil, err
 		}
 		return types.Deposited{
-			ChannelID:    id,
-			ChannelDatum: datum,
+			ChannelID: id,
+			OldDatum:  oldDatum,
+			NewDatum:  newDatum,
 		}, nil
 	case types.DisputedTag:
-		if len(event.ChannelDatum) != 1 {
-			return nil, fmt.Errorf("invalid amout of ChannelDatums received in event. Amout: %d", len(event.ChannelDatum))
+		if len(event.DatumList) != 2 {
+			return nil, fmt.Errorf(errorFormat, types.DisputedTag, 2, len(event.DatumList))
 		}
-		datum, err := event.ChannelDatum[0].Decode()
+		oldDatum, err := event.DatumList[0].Decode()
+		if err != nil {
+			return nil, err
+		}
+		newDatum, err := event.DatumList[1].Decode()
 		if err != nil {
 			return nil, err
 		}
 		return types.Disputed{
-			ChannelID:    id,
-			ChannelDatum: datum,
+			ChannelID: id,
+			OldDatum:  oldDatum,
+			NewDatum:  newDatum,
 		}, nil
-	case types.ProgressedTag:
-		// TODO: Figure out what Progressed Events do?
-		if len(event.ChannelDatum) != 1 {
-			return nil, fmt.Errorf("invalid amout of ChannelDatums received in event. Amout: %d", len(event.ChannelDatum))
+	case types.ConcludedTag:
+		if len(event.DatumList) != 1 {
+			return nil, fmt.Errorf(errorFormat, types.ConcludedTag, 1, len(event.DatumList))
 		}
-		datum, err := event.ChannelDatum[0].Decode()
+		datum, err := event.DatumList[0].Decode()
 		if err != nil {
 			return nil, err
 		}
-		return types.Progressed{
-			ChannelID:    id,
-			ChannelDatum: datum,
+		return types.Concluded{
+			ChannelID: id,
+			OldDatum:  datum,
 		}, nil
-	case types.ConcludedTag:
-		return types.Concluded{ChannelID: id}, nil
-	case types.WithdrawnTag:
-		return types.Withdrawn{ChannelID: id}, nil
 	default:
 		return nil, fmt.Errorf("invalid event tag: %s", event.Tag)
 	}
