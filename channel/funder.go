@@ -24,6 +24,7 @@ func NewFunder(pab *PAB) *Funder {
 }
 
 func (f Funder) Fund(ctx context.Context, req channel.FundingReq) error {
+	//TODO: Actually verify that funding is completed!
 	sub, err := f.pab.NewSubscription(req.Params.ID())
 	defer sub.Close()
 
@@ -87,12 +88,12 @@ func (f Funder) ExpectAndHandleStartEvent(id types.ID, sub *AdjudicatorSub) erro
 	if event.ID() != id {
 		return MismatchingChannelIDError
 	}
-	start, ok := event.(*types.Started)
+	start, ok := event.(*types.Created)
 	if !ok {
 		//TODO: Handle
 		return errors.New("expected Started event")
 	}
-	err := f.pab.SetChannelToken(start.ID(), start.ChannelDatum.ChannelToken)
+	err := f.pab.SetChannelToken(start.ID(), start.NewDatum.ChannelToken)
 	if err != nil {
 		return fmt.Errorf("unable to set channel token: %w", err)
 	}
@@ -114,7 +115,7 @@ func (f Funder) ExpectAndHandleDepositedEvent(id types.ID, sub *AdjudicatorSub) 
 	if err != nil {
 		return err
 	}
-	if token != deposited.ChannelDatum.ChannelToken {
+	if token != deposited.NewDatum.ChannelToken {
 		return MismatchingChannelTokenError
 	}
 	//TODO: Verify & Check Deposit event
