@@ -14,7 +14,16 @@
 
 package wire
 
+import "encoding/json"
+
+const EventMessageTag = "NewObservableState"
+
 type Event struct {
-	Tag          string         `json:"tag"`
-	ChannelDatum []ChannelDatum `json:"channelDatum"`
+	Tag       string         `json:"tag"`
+	DatumList []ChannelDatum `json:"contents"`
+}
+
+type SubscriptionMessage struct {
+	Contents json.RawMessage `json:"contents"`
+	Tag      string          `json:"tag"`
 }
