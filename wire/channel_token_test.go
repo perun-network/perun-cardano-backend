@@ -22,22 +22,22 @@ import (
 )
 
 func TestMakeChannelToken(t *testing.T) {
-	const jsonString = `{
+	const jsonChannelToken = `{
   "ctName": {
-    "unTokenName": "\u00000x9ed6434876ffcb22d6fddd51c7f3c56675470d4b32f8ff0e9051ac1c"
+    "unTokenName": "\u00000x1f726fdf149afa045f6d2dea978cf4d6d82304d2d68e4263fcd9a518"
   },
   "ctSymbol": {
-    "unCurrencySymbol": "2bea49efaf89f14462c697b29471434c095316af444acf1988caeb14"
+    "unCurrencySymbol": "5783a64780a2aa5a14e1824999713727087a2c2eb423c7080475570d"
   },
   "ctTxOutRef": {
     "txOutRefId": {
-      "getTxId": "deadbeef"
+      "getTxId": "a707536d289e9eb51f251ffb193704f8c1c99692148bcc992616b1b11d364c41"
     },
-    "txOutRefIdx": 1
+    "txOutRefIdx": 2
   }
 }`
 	var ct wire.ChannelToken
-	err := json.Unmarshal([]byte(jsonString), &ct)
+	err := json.Unmarshal([]byte(jsonChannelToken), &ct)
 	require.NoError(t, err)
 	tCt := ct.Decode()
 	wCt := wire.MakeChannelToken(tCt)
