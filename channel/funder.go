@@ -26,11 +26,11 @@ func NewFunder(pab *PAB) *Funder {
 func (f Funder) Fund(ctx context.Context, req channel.FundingReq) error {
 	//TODO: Actually verify that funding is completed!
 	sub, err := f.pab.NewSubscription(req.Params.ID())
-	defer sub.Close()
-
 	if err != nil {
 		return fmt.Errorf("unable to create subscription: %w", err)
 	}
+	defer sub.Close()
+
 	params, err := types.MakeChannelParameters(*req.Params.Clone())
 	if err != nil {
 		return fmt.Errorf("unable to convert channel parameters for funding: %w", err)
