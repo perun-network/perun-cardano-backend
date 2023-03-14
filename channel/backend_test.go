@@ -23,6 +23,7 @@ import (
 	"perun.network/perun-cardano-backend/channel"
 	"perun.network/perun-cardano-backend/channel/types"
 	"perun.network/perun-cardano-backend/wallet"
+	"perun.network/perun-cardano-backend/wallet/address"
 	"perun.network/perun-cardano-backend/wallet/test"
 	pkgtest "polycry.pt/poly-go/test"
 	"testing"
@@ -31,7 +32,7 @@ import (
 func setup(rng *rand.Rand) *gptest.Setup {
 
 	w := test.NewRemoteWallet(GenericTestRemote)
-	acc, err := w.Unlock(&GenericTestRemote.AvailableAddress)
+	acc, err := w.Unlock(&GenericTestRemote.AvailableAddresses[0])
 	newRandomAddress := func() gpwallet.Address {
 		rAddr := test.MakeRandomAddress(rng)
 		return &rAddr
@@ -76,7 +77,7 @@ func TestMain(m *testing.M) {
 	// Setting up the go-perun backend values for the generic tests.
 	rng := pkgtest.Prng(main{})
 	addr := test.MakeRandomAddress(rng)
-	GenericTestRemote = test.NewGenericRemote(addr, rng)
+	GenericTestRemote = test.NewGenericRemote([]address.Address{addr}, rng)
 	wb := wallet.MakeRemoteBackend(GenericTestRemote)
 	gpwallet.SetBackend(wb)
 	channel.SetWalletBackend(wb)

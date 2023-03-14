@@ -19,6 +19,7 @@ import (
 	"math/rand"
 	gptest "perun.network/go-perun/wallet/test"
 	"perun.network/perun-cardano-backend/wallet"
+	"perun.network/perun-cardano-backend/wallet/address"
 	"perun.network/perun-cardano-backend/wallet/test"
 	pkgtest "polycry.pt/poly-go/test"
 	"testing"
@@ -99,7 +100,7 @@ func TestRemoteWallet_Unlock(t *testing.T) {
 }
 
 func setup(rng *rand.Rand) *gptest.Setup {
-	r := test.NewGenericRemote(test.MakeRandomAddress(rng), rng)
+	r := test.NewGenericRemote([]address.Address{test.MakeRandomAddress(rng)}, rng)
 	w := test.NewRemoteWallet(r)
 	b := wallet.MakeRemoteBackend(r)
 	marshalledAddress, err := test.MakeRandomAddress(rng).MarshalBinary()
@@ -110,7 +111,7 @@ func setup(rng *rand.Rand) *gptest.Setup {
 	return &gptest.Setup{
 		Backend:           b,
 		Wallet:            w,
-		AddressInWallet:   &r.AvailableAddress,
+		AddressInWallet:   &r.AvailableAddresses[0],
 		ZeroAddress:       zero,
 		AddressMarshalled: marshalledAddress,
 	}
