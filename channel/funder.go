@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"perun.network/go-perun/channel"
 	"perun.network/perun-cardano-backend/channel/types"
+	"time"
 )
 
 var (
@@ -35,6 +37,9 @@ func (f Funder) Fund(ctx context.Context, req channel.FundingReq) error {
 	if err != nil {
 		return fmt.Errorf("unable to convert channel parameters for funding: %w", err)
 	}
+	if len(params.Parties) >= math.MaxUint16 {
+		return fmt.Errorf("too many parties: max: %d, actual: %d", math.MaxUint16, len(params.Parties))
+	}
 	state, err := types.ConvertChannelState(*req.State.Clone())
 	if err != nil {
 		return fmt.Errorf("unable to convert channel state for funding: %w", err)
@@ -42,23 +47,25 @@ func (f Funder) Fund(ctx context.Context, req channel.FundingReq) error {
 
 	for i := uint16(0); i < uint16(req.Idx); i++ {
 		if i == 0 {
-			err = f.ExpectAndHandleStartEvent(req.Params.ID(), sub)
+			err = f.ExpectAndHandleStartEvent(req.Params.ID(), sub, state)
 			if err != nil {
 				return err
 			}
 		} else {
-			err = f.ExpectAndHandleDepositedEvent(req.Params.ID(), sub)
+			err = f.ExpectAndHandleDepositedEvent(req.Params.ID(), sub, i)
 			if err != nil {
 				return err
 			}
 		}
 	}
+	// Unfortunately, this sleep is necessary to avoid a race in the Adjudicator Subscription due to a slow chain index.
+	time.Sleep(5 * time.Second)
 	if uint16(req.Idx) == uint16(0) {
 		err = f.pab.Start(req.Params.ID(), params, state)
 		if err != nil {
 			return err
 		}
-		err = f.ExpectAndHandleStartEvent(req.Params.ID(), sub)
+		err = f.ExpectAndHandleStartEvent(req.Params.ID(), sub, state)
 		if err != nil {
 			return err
 		}
@@ -68,14 +75,15 @@ func (f Funder) Fund(ctx context.Context, req channel.FundingReq) error {
 		if err != nil {
 			return err
 		}
-		err = f.ExpectAndHandleDepositedEvent(req.Params.ID(), sub)
+		err = f.ExpectAndHandleDepositedEvent(req.Params.ID(), sub, uint16(req.Idx))
 		if err != nil {
 			return err
 		}
 	}
 
-	for i := int(req.Idx); i < len(params.Parties); i++ {
-		err = f.ExpectAndHandleDepositedEvent(req.Params.ID(), sub)
+	for i := int(req.Idx) + 1; i < len(params.Parties); i++ {
+		// Narrowing is safe, because we already checked that the number of parties is smaller than math.MaxUint16
+		err = f.ExpectAndHandleDepositedEvent(req.Params.ID(), sub, uint16(i))
 		if err != nil {
 			return err
 		}
@@ -83,33 +91,32 @@ func (f Funder) Fund(ctx context.Context, req channel.FundingReq) error {
 	return nil
 }
 
-func (f Funder) ExpectAndHandleStartEvent(id types.ID, sub *AdjudicatorSub) error {
+func (f Funder) ExpectAndHandleStartEvent(id types.ID, sub *AdjudicatorSub, state types.ChannelState) error {
 	event := sub.Next()
 	if event.ID() != id {
 		return MismatchingChannelIDError
 	}
-	start, ok := event.(*types.Created)
+	start, ok := event.(types.Created)
 	if !ok {
-		//TODO: Handle
-		return errors.New("expected Started event")
+		return fmt.Errorf("expected Created event, got type %T, value: %v", event, event)
 	}
 	err := f.pab.SetChannelToken(start.ID(), start.NewDatum.ChannelToken)
 	if err != nil {
 		return fmt.Errorf("unable to set channel token: %w", err)
 	}
-	return nil
+
+	return verifyStartEvent(start.NewDatum, state)
 	//TODO: Verify & Check Start event
 }
 
-func (f Funder) ExpectAndHandleDepositedEvent(id types.ID, sub *AdjudicatorSub) error {
+func (f Funder) ExpectAndHandleDepositedEvent(id types.ID, sub *AdjudicatorSub, idx uint16) error {
 	event := sub.Next()
 	if event.ID() != id {
 		return MismatchingChannelIDError
 	}
-	deposited, ok := event.(*types.Deposited)
+	deposited, ok := event.(types.Deposited)
 	if !ok {
-		//TODO: Handle
-		return errors.New("expected Deposited event")
+		return fmt.Errorf("expected Deposited event, got type %T, value: %v", event, event)
 	}
 	token, err := f.pab.GetChannelToken(deposited.ID())
 	if err != nil {
@@ -119,5 +126,19 @@ func (f Funder) ExpectAndHandleDepositedEvent(id types.ID, sub *AdjudicatorSub) 
 		return MismatchingChannelTokenError
 	}
 	//TODO: Verify & Check Deposit event
+	return verifyFundedEvent(deposited.NewDatum, idx)
+}
+
+func verifyStartEvent(outputDatum types.ChannelDatum, state types.ChannelState) error {
+	if !outputDatum.ChannelState.Equal(state) {
+		return errors.New("on-chain channel state does not match channel state in funding request")
+	}
+	return verifyFundedEvent(outputDatum, 0)
+}
+
+func verifyFundedEvent(outputDatum types.ChannelDatum, idx uint16) error {
+	if outputDatum.FundingBalances[idx] != outputDatum.ChannelState.Balances[idx] {
+		return fmt.Errorf("party %d did not fund the channel correctly", idx)
+	}
 	return nil
 }
