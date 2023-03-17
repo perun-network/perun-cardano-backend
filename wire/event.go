@@ -19,8 +19,9 @@ import "encoding/json"
 const EventMessageTag = "NewObservableState"
 
 type Event struct {
-	Tag       string         `json:"tag"`
-	DatumList []ChannelDatum `json:"contents"`
+	Tag        string         `json:"tag"`
+	DatumList  []ChannelDatum `json:"eventDatums"`
+	Signatures []Signature    `json:"eventSigs"`
 }
 
 type SubscriptionMessage struct {
