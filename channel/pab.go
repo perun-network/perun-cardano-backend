@@ -153,17 +153,35 @@ func (p *PAB) NewSubscription(id channel.ID) (*AdjudicatorSub, error) {
 }
 
 func (p *PAB) Start(cid channel.ID, params types.ChannelParameters, state types.ChannelState) error {
+	if p.contractInstanceID == "" {
+		if err := p.activateContract(); err != nil {
+			return fmt.Errorf("failed to activate contract: %w", err)
+		}
+	}
 	request := wire.MakeOpenParams(cid, params, state)
-	return p.pabRemote.CallEndpoint(fmt.Sprintf(StartEndpointFormat, p.contractInstanceID), request, nil)
+	err := p.pabRemote.CallEndpoint(fmt.Sprintf(StartEndpointFormat, p.contractInstanceID), request, nil)
+	if err != nil {
+		return fmt.Errorf("failed to call endpoint start: %w", err)
+	}
+	return nil
 }
 
 func (p *PAB) Fund(cid channel.ID, index channel.Index) error {
+	if p.contractInstanceID == "" {
+		if err := p.activateContract(); err != nil {
+			return fmt.Errorf("failed to activate contract: %w", err)
+		}
+	}
 	ct, err := p.GetChannelToken(cid)
 	if err != nil {
 		return fmt.Errorf("failed to fund channel: %w", err)
 	}
 	request := wire.MakeFundParams(cid, ct, uint16(index))
-	return p.pabRemote.CallEndpoint(fmt.Sprintf(FundEndpointFormat, p.contractInstanceID), request, nil)
+	err = p.pabRemote.CallEndpoint(fmt.Sprintf(FundEndpointFormat, p.contractInstanceID), request, nil)
+	if err != nil {
+		return fmt.Errorf("failed to call endpoint fund: %w", err)
+	}
+	return nil
 }
 
 func (p *PAB) Abort() {
@@ -175,12 +193,21 @@ func (p *PAB) Dispute() {
 }
 
 func (p *PAB) Close(id channel.ID, params types.ChannelParameters, state types.ChannelState, sigs []gpwallet.Sig) error {
+	if p.contractInstanceID == "" {
+		if err := p.activateContract(); err != nil {
+			return fmt.Errorf("failed to activate contract: %w", err)
+		}
+	}
 	ct, err := p.GetChannelToken(id)
 	if err != nil {
 		return fmt.Errorf("failed to close channel: %w", err)
 	}
 	request := wire.MakeCloseParams(id, ct, params, state, sigs)
-	return p.pabRemote.CallEndpoint(fmt.Sprintf(CloseEndpointFormat, p.contractInstanceID), request, nil)
+	err = p.pabRemote.CallEndpoint(fmt.Sprintf(CloseEndpointFormat, p.contractInstanceID), request, nil)
+	if err != nil {
+		return fmt.Errorf("failed to call endpoint close: %w", err)
+	}
+	return nil
 }
 
 func (p *PAB) ForceClose() {
