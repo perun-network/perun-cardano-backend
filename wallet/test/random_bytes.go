@@ -31,7 +31,11 @@ func GetRandomByteSlice(minLength int, maxLength int, rng *rand.Rand) []byte {
 func MakeRandomAddress(rng *rand.Rand) address.Address {
 	addrBytes := [address.PubKeyLength]byte{}
 	rng.Read(addrBytes[:])
-	return address.MakeAddressFromByteArray(addrBytes)
+	addr := address.MakeAddressFromPubKeyByteArray(addrBytes)
+	pkhBytes := [address.PubKeyHashLength]byte{}
+	rng.Read(pkhBytes[:])
+	_ = addr.SetPaymentPubKeyHashFromSlice(pkhBytes[:])
+	return addr
 }
 
 func MakeRandomSignature(rng *rand.Rand) wallet.Sig {
@@ -40,13 +44,22 @@ func MakeRandomSignature(rng *rand.Rand) wallet.Sig {
 	return sig
 }
 
-func MakeTooFewPublicKeyBytes(rng *rand.Rand) []byte {
+func MakeTooFewPubKeyBytes(rng *rand.Rand) []byte {
 	return GetRandomByteSlice(0, address.PubKeyLength-1, rng)
 }
 
-func MakeTooManyPublicKeyBytes(rng *rand.Rand) []byte {
+func MakeTooManyPubKeyBytes(rng *rand.Rand) []byte {
 	const maxInvalidPubKeyLength = address.PubKeyLength * 2
 	return GetRandomByteSlice(address.PubKeyLength+1, maxInvalidPubKeyLength, rng)
+}
+
+func MakeTooFewAddressBytes(rng *rand.Rand) []byte {
+	return GetRandomByteSlice(0, address.PubKeyLength+address.PubKeyHashLength-1, rng)
+}
+
+func MakeTooManyAddressBytes(rng *rand.Rand) []byte {
+	const maxInvalidAddressLength = address.PubKeyLength + address.PubKeyHashLength*2
+	return GetRandomByteSlice(address.PubKeyLength+address.PubKeyHashLength+1, maxInvalidAddressLength, rng)
 }
 
 func MakeTooLongSignature(rng *rand.Rand) wallet.Sig {

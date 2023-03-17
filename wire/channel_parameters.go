@@ -66,15 +66,23 @@ func MakeChannelParameters(parameters types.ChannelParameters) ChannelParameters
 }
 
 func MakePaymentPubKeyHash(address address.Address) PaymentPubKeyHash {
-	hash, err := address.GetPubKeyHash()
-	if err != nil {
-		panic(err)
-	}
+	hash := address.GetPubKeyHash()
 	return PaymentPubKeyHash{
 		PubKeyHash: PubKeyHash{
 			Hex: hex.EncodeToString(hash[:]),
 		},
 	}
+}
+
+func (pkh PubKeyHash) Decode() ([]byte, error) {
+	bytes, err := hex.DecodeString(pkh.Hex)
+	if err != nil {
+		return nil, err
+	}
+	if len(bytes) != address.PubKeyHashLength {
+		return nil, fmt.Errorf("pubKeyHash has wrong length: %d", len(bytes))
+	}
+	return bytes, nil
 }
 
 func (cp ChannelParameters) Decode() (types.ChannelParameters, error) {
@@ -85,6 +93,14 @@ func (cp ChannelParameters) Decode() (types.ChannelParameters, error) {
 	}
 	for i, ppk := range cp.SigningPubKeys {
 		addr, err := ppk.PubKey.Decode()
+		if err != nil {
+			return types.ChannelParameters{}, err
+		}
+		pkh, err := cp.PaymentPubKeyHashes[i].PubKeyHash.Decode()
+		if err != nil {
+			return types.ChannelParameters{}, err
+		}
+		err = addr.SetPaymentPubKeyHashFromSlice(pkh)
 		if err != nil {
 			return types.ChannelParameters{}, err
 		}

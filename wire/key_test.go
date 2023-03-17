@@ -27,5 +27,5 @@ func TestPubKey(t *testing.T) {
 	expected := test.MakeRandomAddress(rng)
 	actual, err := wire.MakePubKey(expected).Decode()
 	require.NoError(t, err, "unexpected error when decoding public key")
-	require.Equal(t, expected, actual, "PubKey.Decode returned a wrong address")
+	require.Equal(t, expected.GetPubKey(), actual.GetPubKey(), "PubKey.Decode returned a wrong address")
 }

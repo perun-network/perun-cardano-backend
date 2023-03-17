@@ -237,7 +237,7 @@ func makeGenericCallEndpointDefault(g *GenericRemote) func(string, interface{}, 
 
 func (g *GenericRemote) isAvailable(address address.Address) bool {
 	for _, a := range g.AvailableAddresses {
-		if a.Equal(&address) {
+		if a.GetPubKey() == address.GetPubKey() {
 			return true
 		}
 	}

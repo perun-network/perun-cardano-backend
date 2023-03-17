@@ -139,7 +139,7 @@ func TestDecode(t *testing.T) {
 			uut := wire.PubKey{Hex: hex.EncodeToString(referenceAddress.GetPubKeySlice())}
 			actual, err := uut.Decode()
 			require.NoError(t, err, "unexpected error when decoding public key")
-			require.Equal(t, referenceAddress, actual, "decoded address is wrong")
+			require.Equal(t, referenceAddress.GetPubKey(), actual.GetPubKey(), "decoded address is wrong")
 		}
 	}
 
@@ -170,11 +170,11 @@ func TestDecode(t *testing.T) {
 		t.Run("PubKey Decode - Valid", randomPubKeyTest())
 		t.Run(
 			"PubKey Decode - Invalid - PubKey too short",
-			randomPubKeyInvalidTest(test.MakeTooFewPublicKeyBytes(rng)),
+			randomPubKeyInvalidTest(test.MakeTooFewPubKeyBytes(rng)),
 		)
 		t.Run(
 			"PubKey Decode - Invalid - PubKey too long",
-			randomPubKeyInvalidTest(test.MakeTooManyPublicKeyBytes(rng)),
+			randomPubKeyInvalidTest(test.MakeTooManyPubKeyBytes(rng)),
 		)
 	}
 }

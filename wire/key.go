@@ -37,5 +37,5 @@ func (key PubKey) Decode() (address.Address, error) {
 	if err != nil {
 		return address.Address{}, fmt.Errorf("unable to decode PubKey hex string: %w", err)
 	}
-	return address.MakeAddressFromByteSlice(pubKey)
+	return address.MakeAddressFromPubKeyByteSlice(pubKey)
 }
