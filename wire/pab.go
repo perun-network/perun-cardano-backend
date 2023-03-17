@@ -1,7 +1,6 @@
 package wire
 
 import (
-	"perun.network/go-perun/channel"
 	"perun.network/go-perun/wallet"
 	"perun.network/perun-cardano-backend/channel/types"
 )
@@ -34,11 +33,11 @@ type PerunActivationBody struct {
 
 type AdjudicatorSubscriptionActivationID struct {
 	Tag       string    `json:"tag"`
-	ChannelID ChannelID `json:"channelId"`
+	ChannelID ChannelID `json:"contents"`
 }
 
 type AdjudicatorSubscriptionActivationBody struct {
-	Tag    AdjudicatorSubscriptionActivationID `json:"caID"`
+	CaID   AdjudicatorSubscriptionActivationID `json:"caID"`
 	Wallet ContractActivationWallet            `json:"caWallet"`
 }
 
@@ -55,7 +54,7 @@ func MakePerunActivationBody(walletId string) PerunActivationBody {
 
 func MakeAdjudicatorSubscriptionActivationBody(channelId ChannelID, walletId string) AdjudicatorSubscriptionActivationBody {
 	return AdjudicatorSubscriptionActivationBody{
-		Tag: AdjudicatorSubscriptionActivationID{
+		CaID: AdjudicatorSubscriptionActivationID{
 			Tag:       AdjudicatorTag,
 			ChannelID: channelId,
 		},
@@ -68,10 +67,10 @@ func MakeAdjudicatorSubscriptionActivationBody(channelId ChannelID, walletId str
 type OpenParams struct {
 	Balances            []uint64            `json:"spBalances"`
 	ChannelID           ChannelID           `json:"spChannelId"`
-	Nonce               channel.Nonce       `json:"spNonce"`
-	PaymentPubKeyHashes []PaymentPubKeyHash `json:"pPaymentPKs"`
-	SigningPubKeys      []PaymentPubKey     `json:"pSigningPKs"`
-	TimeLock            int64               `json:"pTimeLock"`
+	Nonce               string              `json:"spNonce"`
+	PaymentPubKeyHashes []PaymentPubKeyHash `json:"spPaymentPKs"`
+	SigningPubKeys      []PaymentPubKey     `json:"spSigningPKs"`
+	TimeLock            int64               `json:"spTimeLock"`
 }
 
 func MakeOpenParams(id ChannelID, p types.ChannelParameters, s types.ChannelState) OpenParams {
