@@ -110,7 +110,7 @@ func (r *pabRemote) callEndpoint(jsonBody []byte, endpoint string) ([]byte, erro
 
 func (p *PAB) SetChannelToken(id channel.ID, token types.ChannelToken) error {
 	emptyToken := types.ChannelToken{}
-	if p.tokenMap[id] == emptyToken {
+	if p.tokenMap[id] != emptyToken {
 		return errors.New("channel token already set in pab")
 	}
 	p.tokenMap[id] = token
