@@ -15,7 +15,6 @@
 package wire
 
 import (
-	"encoding/json"
 	"perun.network/perun-cardano-backend/channel/types"
 )
 
@@ -39,18 +38,12 @@ type CurrencySymbol struct {
 }
 
 type AssetClass struct {
-	CurrencySymbol string `json:"unCurrencySymbol"`
-	TokenName      string `json:"unTokenName"`
-}
-
-func (a AssetClass) MarshalJSON() ([]byte, error) {
-	return json.Marshal([]interface{}{a.CurrencySymbol, a.TokenName})
+	A []interface{} `json:"unAssetClass"`
 }
 
 func MakeAssetClass(token types.ChannelToken) AssetClass {
 	return AssetClass{
-		CurrencySymbol: token.TokenSymbol,
-		TokenName:      token.TokenName,
+		A: []interface{}{CurrencySymbol{Symbol: token.TokenSymbol}, TokenName{Name: token.TokenName}},
 	}
 }
 
