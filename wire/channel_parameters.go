@@ -16,8 +16,8 @@ package wire
 
 import (
 	"encoding/hex"
+	"fmt"
 	"math/big"
-	"perun.network/go-perun/channel"
 	"perun.network/perun-cardano-backend/channel/types"
 	"perun.network/perun-cardano-backend/wallet/address"
 	"time"
@@ -25,7 +25,7 @@ import (
 
 // ChannelParameters reflects the Haskell type `Channel` of the Channel Smart Contract in respect to its json encoding.
 type ChannelParameters struct {
-	Nonce               channel.Nonce       `json:"pNonce"`
+	Nonce               string              `json:"pNonce"`
 	PaymentPubKeyHashes []PaymentPubKeyHash `json:"pPaymentPKs"`
 	SigningPubKeys      []PaymentPubKey     `json:"pSigningPKs"`
 	TimeLock            int64               `json:"pTimeLock"`
@@ -57,7 +57,7 @@ func MakeChannelParameters(parameters types.ChannelParameters) ChannelParameters
 		signingPubKeys[i] = MakePaymentPubKey(addr)
 	}
 	return ChannelParameters{
-		Nonce:               new(big.Int).Set(parameters.Nonce),
+		Nonce:               fmt.Sprintf("%x", parameters.Nonce),
 		PaymentPubKeyHashes: pubKeyHashes,
 		SigningPubKeys:      signingPubKeys,
 		TimeLock:            parameters.Timeout.Milliseconds(),
@@ -79,6 +79,10 @@ func MakePaymentPubKeyHash(address address.Address) PaymentPubKeyHash {
 
 func (cp ChannelParameters) Decode() (types.ChannelParameters, error) {
 	parties := make([]address.Address, len(cp.SigningPubKeys))
+	n, ok := new(big.Int).SetString(cp.Nonce, 16)
+	if !ok {
+		return types.ChannelParameters{}, fmt.Errorf("unable to decode nonce: %s", cp.Nonce)
+	}
 	for i, ppk := range cp.SigningPubKeys {
 		addr, err := ppk.PubKey.Decode()
 		if err != nil {
@@ -88,7 +92,7 @@ func (cp ChannelParameters) Decode() (types.ChannelParameters, error) {
 	}
 	return types.ChannelParameters{
 		Parties: parties,
-		Nonce:   new(big.Int).Set(cp.Nonce),
+		Nonce:   n,
 		Timeout: time.Duration(cp.TimeLock) * time.Millisecond,
 	}, nil
 }

@@ -25,7 +25,7 @@ func TestChannelDatum_Decode(t *testing.T) {
 	const jsonString = `
 {
   "channelParameters": {
-    "pNonce": 69,
+    "pNonce": "69",
     "pPaymentPKs": [
       {
         "unPaymentPubKeyHash": {

@@ -13,7 +13,7 @@ const jsonSubscriptionMessage = `{
       "contents": [
         {
           "channelParameters": {
-            "pNonce": 6794739380500570000,
+            "pNonce": "0101000000000000000894190425c5d2ce24",
             "pPaymentPKs": [
               {
                 "unPaymentPubKeyHash": {
