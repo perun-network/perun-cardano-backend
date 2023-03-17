@@ -32,9 +32,10 @@ type AdjudicatorSub struct {
 	connection *websocket.Conn
 	lastError  chan error
 	ChannelID  types.ID
+	IsPerunSub bool
 }
 
-func newAdjudicatorSub(contractUrl *url.URL, id types.ID) (*AdjudicatorSub, error) {
+func newAdjudicatorSub(contractUrl *url.URL, id types.ID, isPerunSub bool) (*AdjudicatorSub, error) {
 	conn, _, err := websocket.DefaultDialer.Dial(contractUrl.String(), nil)
 	if err != nil {
 		return nil, errors.New("unable to establish connection to PAB")
@@ -44,6 +45,7 @@ func newAdjudicatorSub(contractUrl *url.URL, id types.ID) (*AdjudicatorSub, erro
 		connection: conn,
 		lastError:  make(chan error),
 		ChannelID:  id,
+		IsPerunSub: isPerunSub,
 	}
 	go receiveEvents(a)
 	return a, nil
@@ -79,16 +81,25 @@ func receiveEvents(a *AdjudicatorSub) {
 }
 
 func (a AdjudicatorSub) Next() gpchannel.AdjudicatorEvent {
-	event, ok := <-a.eventQueue
-	if !ok {
-		return nil
+	for {
+		event, ok := <-a.eventQueue
+
+		if !ok {
+			return nil
+		}
+		adjEvent, err := decodeEvent(event, a.ChannelID)
+		if err != nil {
+			a.lastError <- err
+			return nil
+		}
+		if !a.IsPerunSub {
+			return adjEvent
+		}
+		perunEvent := adjEvent.ToPerunEvent()
+		if perunEvent != nil {
+			return perunEvent
+		}
 	}
-	adjEvent, err := decodeEvent(event, a.ChannelID)
-	if err != nil {
-		a.lastError <- err
-		return nil
-	}
-	return adjEvent
 }
 
 func (a AdjudicatorSub) Err() error {
@@ -104,7 +115,7 @@ func (a AdjudicatorSub) Close() error {
 	return a.connection.Close()
 }
 
-func decodeEvent(event wire.Event, id types.ID) (gpchannel.AdjudicatorEvent, error) {
+func decodeEvent(event wire.Event, id types.ID) (types.InternalEvent, error) {
 	const errorFormat = "invalid amount of ChannelDatums received in %s event. Expected: %d, Actual: %d"
 	switch event.Tag {
 	case types.CreatedTag:

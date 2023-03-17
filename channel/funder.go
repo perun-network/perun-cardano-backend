@@ -27,7 +27,7 @@ func NewFunder(pab *PAB) *Funder {
 
 func (f Funder) Fund(ctx context.Context, req channel.FundingReq) error {
 	//TODO: Actually verify that funding is completed!
-	sub, err := f.pab.NewSubscription(req.Params.ID())
+	sub, err := f.pab.NewInternalSubscription(req.Params.ID())
 	if err != nil {
 		return fmt.Errorf("unable to create subscription: %w", err)
 	}

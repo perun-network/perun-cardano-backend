@@ -141,7 +141,7 @@ func (p *PAB) activateContract() error {
 	return nil
 }
 
-func (p *PAB) NewSubscription(id channel.ID) (*AdjudicatorSub, error) {
+func (p *PAB) createSubscription(id channel.ID, isPerunSub bool) (*AdjudicatorSub, error) {
 	request := wire.MakeAdjudicatorSubscriptionActivationBody(id, p.acc.GetCardanoWalletID())
 	var response wire.ContractInstanceID
 	err := p.pabRemote.CallEndpoint(ActivateEndpoint, request, &response)
@@ -149,7 +149,15 @@ func (p *PAB) NewSubscription(id channel.ID) (*AdjudicatorSub, error) {
 		return nil, fmt.Errorf("failed to activate subscription contract: %w", err)
 	}
 	subUrl := p.subscriptionUrlBase.JoinPath(response.Decode())
-	return newAdjudicatorSub(subUrl, id)
+	return newAdjudicatorSub(subUrl, id, isPerunSub)
+}
+
+func (p *PAB) NewInternalSubscription(id channel.ID) (*AdjudicatorSub, error) {
+	return p.createSubscription(id, false)
+}
+
+func (p *PAB) NewPerunEventSubscription(id channel.ID) (*AdjudicatorSub, error) {
+	return p.createSubscription(id, true)
 }
 
 func (p *PAB) Start(cid channel.ID, params types.ChannelParameters, state types.ChannelState) error {

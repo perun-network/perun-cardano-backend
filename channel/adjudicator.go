@@ -40,5 +40,5 @@ func (a Adjudicator) Progress(ctx context.Context, req channel.ProgressReq) erro
 }
 
 func (a Adjudicator) Subscribe(ctx context.Context, id channel.ID) (channel.AdjudicatorSubscription, error) {
-	return a.pab.NewSubscription(id)
+	return a.pab.NewPerunEventSubscription(id)
 }
