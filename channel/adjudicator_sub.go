@@ -80,6 +80,10 @@ func receiveEvents(a *AdjudicatorSub) {
 	}
 }
 
+// Next returns the next AdjudicatorEvent. It blocks until the next event is available.
+// If the subscription is closed, or there is an error, it returns nil.
+// Once Next returns nil, a subsequent call to Err will return the error that caused the subscription to close.
+// Note: This may return either a types.InternalEvent or an AdjudicatorEvent depending on the type of the subscription.
 func (a AdjudicatorSub) Next() gpchannel.AdjudicatorEvent {
 	for {
 		event, ok := <-a.eventQueue
@@ -102,6 +106,7 @@ func (a AdjudicatorSub) Next() gpchannel.AdjudicatorEvent {
 	}
 }
 
+// Err returns the error after a call to Next returned nil, or nil if there is no error.
 func (a AdjudicatorSub) Err() error {
 	select {
 	case err := <-a.lastError:
@@ -111,6 +116,7 @@ func (a AdjudicatorSub) Err() error {
 	}
 }
 
+// Close closes the subscription.
 func (a AdjudicatorSub) Close() error {
 	return a.connection.Close()
 }

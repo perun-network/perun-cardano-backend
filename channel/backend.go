@@ -37,6 +37,7 @@ func SetWalletBackend(remoteBackend remotewallet.RemoteBackend) {
 }
 
 // CalcID calculates the channel-id from the parameters.
+// Note that the remote wallet is used for this.
 func (b backend) CalcID(params *pchannel.Params) pchannel.ID {
 	if params == nil {
 		panic("params must not be nil for channel id calculation")

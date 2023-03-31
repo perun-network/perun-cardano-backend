@@ -14,6 +14,8 @@
 
 package types
 
+// ChannelToken is the backends representation of our channel's on-chain ThreadToken NFT.
+// It is used to establish channel uniqueness and to identify the channel on-chain.
 type ChannelToken struct {
 	TokenSymbol string
 	TokenName   string

@@ -17,7 +17,7 @@ func NewAdjudicator(pab *PAB) *Adjudicator {
 }
 
 func (a Adjudicator) Register(ctx context.Context, req channel.AdjudicatorReq, states []channel.SignedState) error {
-	//TODO implement me
+	//TODO implement dishonest case
 	panic("implement me")
 }
 
@@ -35,7 +35,7 @@ func (a Adjudicator) Withdraw(ctx context.Context, req channel.AdjudicatorReq, s
 }
 
 func (a Adjudicator) Progress(ctx context.Context, req channel.ProgressReq) error {
-	//TODO implement me
+	//TODO implement dishonest case
 	panic("implement me")
 }
 

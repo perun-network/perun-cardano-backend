@@ -85,6 +85,7 @@ func MakeBalance(balance big.Int) (Balance, error) {
 	return balance.Uint64(), nil
 }
 
+// ConvertChannelState converts a go-perun channel.State to a ChannelState.
 func ConvertChannelState(state channel.State) (ChannelState, error) {
 	if err := state.Valid(); err != nil {
 		return ChannelState{}, fmt.Errorf("state is invalid")

@@ -37,6 +37,7 @@ type pabRemote struct {
 	pabUrl *url.URL
 }
 
+// NewPAB creates a new PAB instance. It expects a host string in the format "host:port" (e.g. "localhost:9080").
 func NewPAB(host string, acc wallet.RemoteAccount) (*PAB, error) {
 	pabUrl, err := url.Parse("http://" + host)
 	if err != nil {
@@ -152,14 +153,21 @@ func (p *PAB) createSubscription(id channel.ID, isPerunSub bool) (*AdjudicatorSu
 	return newAdjudicatorSub(subUrl, id, isPerunSub)
 }
 
+// NewInternalSubscription creates a new adjudicator subscription for the given channel. The subscription will return
+// internal events. These are more specific to the Cardano implementation of the Perun contract and contain more
+// information. The internal events can not be used for anything go-perun related.
+// For this use NewPerunEventSubscription instead.
 func (p *PAB) NewInternalSubscription(id channel.ID) (*AdjudicatorSub, error) {
 	return p.createSubscription(id, false)
 }
 
+// NewPerunEventSubscription creates a new adjudicator subscription for the given channel. The subscription will return
+// perun events (generealized events compatible with the go-perun core).
 func (p *PAB) NewPerunEventSubscription(id channel.ID) (*AdjudicatorSub, error) {
 	return p.createSubscription(id, true)
 }
 
+// Start issues a request to the PAB to start the channel with the given parameters and initial state.
 func (p *PAB) Start(cid channel.ID, params types.ChannelParameters, state types.ChannelState) error {
 	if p.contractInstanceID == "" {
 		if err := p.activateContract(); err != nil {
@@ -174,6 +182,7 @@ func (p *PAB) Start(cid channel.ID, params types.ChannelParameters, state types.
 	return nil
 }
 
+// Fund issues a request to the PAB to fund the channel with the given parameters.
 func (p *PAB) Fund(cid channel.ID, index channel.Index) error {
 	if p.contractInstanceID == "" {
 		if err := p.activateContract(); err != nil {
@@ -192,14 +201,18 @@ func (p *PAB) Fund(cid channel.ID, index channel.Index) error {
 	return nil
 }
 
+// Abort issues a request to the PAB to abort the channel. This only works on channels that
+// are not completely funded yet.
 func (p *PAB) Abort() {
 	//TODO
 }
 
+// Dispute issues a request to the PAB to dispute the channel.
 func (p *PAB) Dispute() {
 	//TODO
 }
 
+// Close issues a request to the PAB to close the channel with the given parameters and final state.
 func (p *PAB) Close(id channel.ID, params types.ChannelParameters, state types.ChannelState, sigs []gpwallet.Sig) error {
 	if p.contractInstanceID == "" {
 		if err := p.activateContract(); err != nil {
@@ -218,6 +231,9 @@ func (p *PAB) Close(id channel.ID, params types.ChannelParameters, state types.C
 	return nil
 }
 
+// ForceClose issues a request to the PAB to force close the channel with the given parameters and state. This settles
+// the current on-chain state of the channel. One can only force close a channel, if it was disputed beforehand and the
+// relative time-lock has expired.
 func (p *PAB) ForceClose() {
 	//TODO
 }

@@ -25,8 +25,8 @@ func NewFunder(pab *PAB) *Funder {
 	}
 }
 
-func (f Funder) Fund(ctx context.Context, req channel.FundingReq) error {
-	//TODO: Actually verify that funding is completed!
+func (f Funder) Fund(_ context.Context, req channel.FundingReq) error {
+	// TODO implement funding abort (reclamation of funds on peer misbehaviour)
 	sub, err := f.pab.NewInternalSubscription(req.Params.ID())
 	if err != nil {
 		return fmt.Errorf("unable to create subscription: %w", err)
@@ -106,7 +106,6 @@ func (f Funder) ExpectAndHandleStartEvent(id types.ID, sub *AdjudicatorSub, stat
 	}
 
 	return verifyStartEvent(start.NewDatum, state)
-	//TODO: Verify & Check Start event
 }
 
 func (f Funder) ExpectAndHandleDepositedEvent(id types.ID, sub *AdjudicatorSub, idx uint16) error {
@@ -125,7 +124,6 @@ func (f Funder) ExpectAndHandleDepositedEvent(id types.ID, sub *AdjudicatorSub, 
 	if token != deposited.NewDatum.ChannelToken {
 		return MismatchingChannelTokenError
 	}
-	//TODO: Verify & Check Deposit event
 	return verifyFundedEvent(deposited.NewDatum, idx)
 }
 
