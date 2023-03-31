@@ -123,7 +123,7 @@ func TestAddress_GetTestnetAddress(t *testing.T) {
 	require.NoErrorf(t, err, "this should not fail!")
 	addr, err := address.MakeAddressFromPubKeyByteSlice(addrBytes)
 	require.NoErrorf(t, err, "unable to create address from byte slice")
-	actual, err := addr.GetTestnetAddress()
+	actual, err := addr.GetTestnetAddressOfPubKey()
 	require.NoErrorf(t, err, "unexpected error when deriving address string from address")
 	require.Equal(t, expected, actual, "address string is not as expected")
 }
@@ -135,7 +135,7 @@ func TestAddress_GetMainnetAddress(t *testing.T) {
 	require.NoErrorf(t, err, "this should not fail!")
 	addr, err := address.MakeAddressFromPubKeyByteSlice(addrBytes)
 	require.NoErrorf(t, err, "unable to create address from byte slice")
-	actual, err := addr.GetMainnetAddress()
+	actual, err := addr.GetMainnetAddressOfPubKey()
 	require.NoErrorf(t, err, "unexpected error when deriving address string from address")
 	require.Equal(t, expected, actual, "address string is not as expected")
 }
