@@ -157,12 +157,14 @@ func (p *PAB) createSubscription(id channel.ID, isPerunSub bool) (*AdjudicatorSu
 // internal events. These are more specific to the Cardano implementation of the Perun contract and contain more
 // information. The internal events can not be used for anything go-perun related.
 // For this use NewPerunEventSubscription instead.
+// Care: Only ever interact with the subscription's Next and Err methods from within the same goroutine.
 func (p *PAB) NewInternalSubscription(id channel.ID) (*AdjudicatorSub, error) {
 	return p.createSubscription(id, false)
 }
 
 // NewPerunEventSubscription creates a new adjudicator subscription for the given channel. The subscription will return
 // perun events (generealized events compatible with the go-perun core).
+// Care: Only ever interact with the subscription's Next and Err methods from within the same goroutine.
 func (p *PAB) NewPerunEventSubscription(id channel.ID) (*AdjudicatorSub, error) {
 	return p.createSubscription(id, true)
 }

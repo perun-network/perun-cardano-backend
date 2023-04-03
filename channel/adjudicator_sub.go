@@ -28,11 +28,15 @@ import (
 // AdjudicatorSub is a subscription to the Adjudicator events.
 // Instances should only be created using PAB.NewSubscription.
 type AdjudicatorSub struct {
-	eventQueue chan wire.Event
+	eventQueue chan gpchannel.AdjudicatorEvent
 	connection *websocket.Conn
 	lastError  chan error
 	ChannelID  types.ID
-	IsPerunSub bool
+	close      chan struct{}
+	// IsPerunSub specifies whether a subscription yields Perun events or Internal events.
+	IsPerunSub        bool
+	receivedNilOnNext bool
+	receivedError     error
 }
 
 func newAdjudicatorSub(contractUrl *url.URL, id types.ID, isPerunSub bool) (*AdjudicatorSub, error) {
@@ -41,10 +45,11 @@ func newAdjudicatorSub(contractUrl *url.URL, id types.ID, isPerunSub bool) (*Adj
 		return nil, errors.New("unable to establish connection to PAB")
 	}
 	a := &AdjudicatorSub{
-		eventQueue: make(chan wire.Event),
+		eventQueue: make(chan gpchannel.AdjudicatorEvent),
 		connection: conn,
-		lastError:  make(chan error),
+		lastError:  make(chan error, 1),
 		ChannelID:  id,
+		close:      make(chan struct{}),
 		IsPerunSub: isPerunSub,
 	}
 	go receiveEvents(a)
@@ -52,14 +57,18 @@ func newAdjudicatorSub(contractUrl *url.URL, id types.ID, isPerunSub bool) (*Adj
 }
 
 func receiveEvents(a *AdjudicatorSub) {
+	closeGracefully := func(err error) {
+		a.lastError <- err
+		close(a.eventQueue)
+		close(a.lastError)
+		_ = a.connection.Close()
+	}
+
 	var message wire.SubscriptionMessage
 	for {
 		err := a.connection.ReadJSON(&message)
 		if err != nil {
-			a.lastError <- err
-			close(a.eventQueue)
-			close(a.lastError)
-			_ = a.connection.Close()
+			closeGracefully(err)
 			return
 		}
 		if message.Tag != wire.EventMessageTag {
@@ -68,48 +77,65 @@ func receiveEvents(a *AdjudicatorSub) {
 		var events []wire.Event
 		err = json.Unmarshal(message.Contents, &events)
 		if err != nil {
-			a.lastError <- fmt.Errorf("malformed event message: %w", err)
-			close(a.eventQueue)
-			close(a.lastError)
-			_ = a.connection.Close()
+			closeGracefully(fmt.Errorf("malformed event message: %w", err))
 			return
 		}
 		for _, e := range events {
-			a.eventQueue <- e
+			adjEvent, err := decodeEvent(e, a.ChannelID)
+			if err != nil {
+				closeGracefully(err)
+				return
+			}
+			if !a.IsPerunSub {
+				select {
+				case a.eventQueue <- adjEvent:
+				case <-a.close:
+					closeGracefully(errors.New("subscription closed by user"))
+					return
+				}
+				a.eventQueue <- adjEvent
+			}
+			perunEvent := adjEvent.ToPerunEvent()
+			if perunEvent == nil {
+				continue
+			}
+			select {
+			case a.eventQueue <- perunEvent:
+			case <-a.close:
+				closeGracefully(errors.New("subscription closed by user"))
+				return
+			}
 		}
 	}
 }
 
 // Next returns the next AdjudicatorEvent. It blocks until the next event is available.
 // If the subscription is closed, or there is an error, it returns nil.
-// Once Next returns nil, a subsequent call to Err will return the error that caused the subscription to close.
+// Once Next returns nil, a subsequent call to Err will return the error that caused the subscription to close and all
+// subsequent calls to Next will also return nil.
+// It is important to only interact with one Subscription from a single go-routine!
 // Note: This may return either a types.InternalEvent or an AdjudicatorEvent depending on the type of the subscription.
 func (a AdjudicatorSub) Next() gpchannel.AdjudicatorEvent {
-	for {
-		event, ok := <-a.eventQueue
-
-		if !ok {
-			return nil
-		}
-		adjEvent, err := decodeEvent(event, a.ChannelID)
-		if err != nil {
-			a.lastError <- err
-			return nil
-		}
-		if !a.IsPerunSub {
-			return adjEvent
-		}
-		perunEvent := adjEvent.ToPerunEvent()
-		if perunEvent != nil {
-			return perunEvent
-		}
+	if a.receivedNilOnNext {
+		return nil
 	}
+	ret := <-a.eventQueue
+	if ret == nil {
+		a.receivedNilOnNext = true
+	}
+	return ret
 }
 
 // Err returns the error after a call to Next returned nil, or nil if there is no error.
+// Once Err returns a non-nil error, all subsequent calls to Err will return the same error.
+// It is important to only interact with one Subscription from a single go-routine!
 func (a AdjudicatorSub) Err() error {
+	if a.receivedError != nil {
+		return a.receivedError
+	}
 	select {
 	case err := <-a.lastError:
+		a.receivedError = err
 		return err
 	default:
 		return nil
@@ -118,6 +144,7 @@ func (a AdjudicatorSub) Err() error {
 
 // Close closes the subscription.
 func (a AdjudicatorSub) Close() error {
+	close(a.close)
 	return a.connection.Close()
 }
 
