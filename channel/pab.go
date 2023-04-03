@@ -163,7 +163,7 @@ func (p *PAB) NewInternalSubscription(id channel.ID) (*AdjudicatorSub, error) {
 }
 
 // NewPerunEventSubscription creates a new adjudicator subscription for the given channel. The subscription will return
-// perun events (generealized events compatible with the go-perun core).
+// perun events (generalized events compatible with the go-perun core).
 // Care: Only ever interact with the subscription's Next and Err methods from within the same goroutine.
 func (p *PAB) NewPerunEventSubscription(id channel.ID) (*AdjudicatorSub, error) {
 	return p.createSubscription(id, true)
