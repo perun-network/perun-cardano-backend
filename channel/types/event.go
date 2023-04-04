@@ -26,7 +26,9 @@ const (
 	ConcludedTag = "Concluded"
 )
 
-// TODO: Figure out what to return on AdjudicatorEvent.Version(), if there is no concept of a state version for that event
+// TODO: Figure out what to return on AdjudicatorEvent.Version(), if there is no concept of a state version for that
+// event. E.g.: The `Concluded` event only has access to the on-chain state prior to conclusion, which might not be
+// the version that is eventually concluded.
 
 type InternalEvent interface {
 	channel.AdjudicatorEvent

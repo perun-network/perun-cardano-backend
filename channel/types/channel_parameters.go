@@ -29,7 +29,7 @@ type ChannelParameters struct {
 	Timeout time.Duration
 }
 
-// MakeChannelParameters constructs a ChannelParameters from a go-perun channel.Params.
+// MakeChannelParameters constructs ChannelParameters from a go-perun channel.Params.
 func MakeChannelParameters(params channel.Params) (ChannelParameters, error) {
 	if params.App != channel.NoApp() {
 		return ChannelParameters{}, fmt.Errorf("the backend does not support an app in parameters")

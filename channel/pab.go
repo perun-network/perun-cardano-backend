@@ -25,6 +25,10 @@ const (
 	CloseEndpointFormat = InstanceEndpoint + "/%s/endpoint/close"
 )
 
+// PAB is a client for the PAB server. It is used to create and interact with Perun Channel contracts through the PAB
+// server. It is also used to create event subscriptions for channels.
+// One PAB instance can be used by one account to create multiple channels and create an arbitrary number of
+// subscriptions per channel.
 type PAB struct {
 	tokenMap            map[channel.ID]types.ChannelToken
 	contractInstanceID  string
@@ -33,6 +37,7 @@ type PAB struct {
 	pabRemote
 }
 
+// pabRemote is responsible for calling the PAB server endpoints.
 type pabRemote struct {
 	pabUrl *url.URL
 }
@@ -142,6 +147,7 @@ func (p *PAB) activateContract() error {
 	return nil
 }
 
+// createSubscription should not be used. Use NewInternalSubscription or NewPerunEventSubscription instead.
 func (p *PAB) createSubscription(id channel.ID, isPerunSub bool) (*AdjudicatorSub, error) {
 	request := wire.MakeAdjudicatorSubscriptionActivationBody(id, p.acc.GetCardanoWalletID())
 	var response wire.ContractInstanceID

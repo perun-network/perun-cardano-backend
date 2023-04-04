@@ -16,7 +16,7 @@ package types
 
 import "time"
 
-// ChannelDatum is the backends representation of an on-chain datum.
+// ChannelDatum is the perun-cardano-backend's representation of an on-chain datum.
 type ChannelDatum struct {
 	ChannelParameters ChannelParameters
 	ChannelToken      ChannelToken

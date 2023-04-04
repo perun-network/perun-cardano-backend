@@ -23,7 +23,7 @@ import (
 )
 
 // backend implements the backend interface
-// The type is private since it only needs to be exposed as singleton by the
+// The type is private since it only needs to be exposed as a singleton by the
 // `Backend` variable.
 // The current version of backend needs to use our wallet.RemoteBackend implementation.
 // This is a workaround that makes encoding state for signing and verifying possible.
