@@ -15,6 +15,7 @@
 package types
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -53,9 +54,19 @@ func MakeAlloc(a channel.Allocation) ([]Balance, error) {
 	}
 	ret := make([]uint64, len(a.Balances[0]))
 
+	if len(a.Assets) != len(a.Balances) {
+		return ret, errors.New("invalid allocation")
+	}
+
+	// Necessary because this backend currently only supports a single (native) asset and no sub-channels.
 	if len(a.Assets) != 1 || len(a.Balances) != 1 || len(a.Locked) != 0 {
 		return ret, fmt.Errorf("allocation incompatible with this backend")
 	}
+	// Necessary because this backend currently only supports a single (native) asset.
+	if !a.Assets[0].Equal(Asset) {
+		return ret, errors.New("allocation has asset other than native asset")
+	}
+
 	for i, balance := range a.Balances[0] {
 		if ret[i], err = MakeBalance(*balance); err != nil {
 			break

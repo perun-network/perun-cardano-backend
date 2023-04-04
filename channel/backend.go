@@ -95,7 +95,7 @@ func (b backend) Verify(addr wallet.Address, state *pchannel.State, sig wallet.S
 // NewAsset returns a variable of type Asset, which can be used for unmarshalling an asset from its binary
 // representation.
 func (b backend) NewAsset() pchannel.Asset {
-	return Asset
+	return types.Asset
 }
 
 var Backend backend
