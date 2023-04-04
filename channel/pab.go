@@ -214,11 +214,13 @@ func (p *PAB) Fund(cid channel.ID, index channel.Index) error {
 // are not completely funded yet.
 func (p *PAB) Abort() {
 	//TODO
+	panic("implement me")
 }
 
 // Dispute issues a request to the PAB to dispute the channel.
 func (p *PAB) Dispute() {
 	//TODO
+	panic("implement me")
 }
 
 // Close issues a request to the PAB to close the channel with the given parameters and final state.
@@ -245,4 +247,5 @@ func (p *PAB) Close(id channel.ID, params types.ChannelParameters, state types.C
 // relative time-lock has expired.
 func (p *PAB) ForceClose() {
 	//TODO
+	panic("implement me")
 }
