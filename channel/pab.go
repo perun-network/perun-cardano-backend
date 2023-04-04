@@ -40,6 +40,7 @@ type PAB struct {
 // pabRemote is responsible for calling the PAB server endpoints.
 type pabRemote struct {
 	pabUrl *url.URL
+	client *http.Client
 }
 
 // NewPAB creates a new PAB instance. It expects a host string in the format "host:port" (e.g. "localhost:9080").
@@ -58,6 +59,7 @@ func NewPAB(host string, acc wallet.RemoteAccount) (*PAB, error) {
 		subscriptionUrlBase: subscriptionUrl,
 		pabRemote: pabRemote{
 			pabUrl: pabUrl,
+			client: &http.Client{},
 		},
 	}, nil
 }
@@ -90,8 +92,7 @@ func (r *pabRemote) callEndpoint(jsonBody []byte, endpoint string) ([]byte, erro
 	}
 	request.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{}
-	response, err := client.Do(request)
+	response, err := r.client.Do(request)
 	if err != nil {
 		return nil, fmt.Errorf("unable to send http request: %w", err)
 	}
