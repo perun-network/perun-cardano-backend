@@ -19,20 +19,19 @@ import (
 	pchannel "perun.network/go-perun/channel"
 	"perun.network/go-perun/wallet"
 	"perun.network/perun-cardano-backend/channel/types"
-	remotewallet "perun.network/perun-cardano-backend/wallet"
 )
 
-// backend implements the backend interface
+// backend implements the wallet.Backend interface
 // The type is private since it only needs to be exposed as a singleton by the
 // `Backend` variable.
 // The current version of backend needs to use our wallet.RemoteBackend implementation.
 // This is a workaround that makes encoding state for signing and verifying possible.
 type backend struct {
-	walletBackend remotewallet.RemoteBackend
+	walletBackend types.ExtendedWalletBackend
 }
 
 // SetWalletBackend needs to be called initially.
-func SetWalletBackend(remoteBackend remotewallet.RemoteBackend) {
+func SetWalletBackend(remoteBackend types.ExtendedWalletBackend) {
 	Backend = backend{walletBackend: remoteBackend}
 }
 
@@ -61,9 +60,9 @@ func (b backend) Sign(account wallet.Account, state *pchannel.State) (wallet.Sig
 	if state == nil {
 		return nil, fmt.Errorf("state must not be nil for signing")
 	}
-	remoteAccount, ok := account.(remotewallet.RemoteAccount)
-	if !ok {
-		return nil, fmt.Errorf("unable to cast Account to RemoteAccount")
+	acc, err := b.walletBackend.ToChannelStateSigningAccount(account)
+	if err != nil {
+		return nil, err
 	}
 
 	channelState, err := types.ConvertChannelState(*state)
@@ -71,7 +70,7 @@ func (b backend) Sign(account wallet.Account, state *pchannel.State) (wallet.Sig
 		return nil, fmt.Errorf("unable to convert state for signing: %w", err)
 	}
 
-	return remoteAccount.SignChannelState(channelState)
+	return acc.SignChannelState(channelState)
 }
 
 // Verify returns true, iff the signature is correct for the given state and address.
