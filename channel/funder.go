@@ -45,7 +45,7 @@ func (f Funder) Fund(_ context.Context, req channel.FundingReq) error {
 		return fmt.Errorf("unable to convert channel state for funding: %w", err)
 	}
 
-	for i := uint16(0); i < uint16(req.Idx); i++ {
+	for i := channel.Index(0); i < req.Idx; i++ {
 		if i == 0 {
 			err = f.ExpectAndHandleStartEvent(req.Params.ID(), sub, state)
 			if err != nil {
@@ -60,7 +60,7 @@ func (f Funder) Fund(_ context.Context, req channel.FundingReq) error {
 	}
 	// Unfortunately, this sleep is necessary to avoid a race in the Adjudicator Subscription due to a slow chain index.
 	time.Sleep(5 * time.Second)
-	if uint16(req.Idx) == uint16(0) {
+	if req.Idx == channel.Index(0) {
 		err = f.pab.Start(req.Params.ID(), params, state)
 		if err != nil {
 			return err
@@ -75,15 +75,15 @@ func (f Funder) Fund(_ context.Context, req channel.FundingReq) error {
 		if err != nil {
 			return err
 		}
-		err = f.ExpectAndHandleDepositedEvent(req.Params.ID(), sub, uint16(req.Idx))
+		err = f.ExpectAndHandleDepositedEvent(req.Params.ID(), sub, req.Idx)
 		if err != nil {
 			return err
 		}
 	}
 
-	for i := int(req.Idx) + 1; i < len(params.Parties); i++ {
-		// Narrowing is safe, because we already checked that the number of parties is smaller than math.MaxUint16
-		err = f.ExpectAndHandleDepositedEvent(req.Params.ID(), sub, uint16(i))
+	// Narrowing is safe, because we already checked that the number of parties is smaller than math.MaxUint16
+	for i := req.Idx + 1; i < channel.Index(len(params.Parties)); i++ {
+		err = f.ExpectAndHandleDepositedEvent(req.Params.ID(), sub, i)
 		if err != nil {
 			return err
 		}
@@ -108,7 +108,7 @@ func (f Funder) ExpectAndHandleStartEvent(id types.ID, sub *AdjudicatorSub, stat
 	return verifyStartEvent(start.NewDatum, state)
 }
 
-func (f Funder) ExpectAndHandleDepositedEvent(id types.ID, sub *AdjudicatorSub, idx uint16) error {
+func (f Funder) ExpectAndHandleDepositedEvent(id types.ID, sub *AdjudicatorSub, idx channel.Index) error {
 	event := sub.Next()
 	if event.ID() != id {
 		return MismatchingChannelIDError
@@ -134,7 +134,7 @@ func verifyStartEvent(outputDatum types.ChannelDatum, state types.ChannelState) 
 	return verifyFundedEvent(outputDatum, 0)
 }
 
-func verifyFundedEvent(outputDatum types.ChannelDatum, idx uint16) error {
+func verifyFundedEvent(outputDatum types.ChannelDatum, idx channel.Index) error {
 	if outputDatum.FundingBalances[idx] != outputDatum.ChannelState.Balances[idx] {
 		return fmt.Errorf("party %d did not fund the channel correctly", idx)
 	}
