@@ -95,7 +95,7 @@ func (f Funder) Fund(_ context.Context, req channel.FundingReq) error {
 
 func (f Funder) ExpectAndHandleStartEvent(id types.ID, sub *AdjudicatorSub, state types.ChannelState, file *os.File) error {
 	event := sub.Next()
-	file.WriteString(fmt.Sprintf("Got event: %T, %v\n", event, event))
+	file.WriteString(fmt.Sprintf("On id: %s,expected created event, got event: %T, %v\n", f.pab.GetContractInstanceID(), event, event))
 	if event.ID() != id {
 		return MismatchingChannelIDError
 	}
@@ -113,7 +113,7 @@ func (f Funder) ExpectAndHandleStartEvent(id types.ID, sub *AdjudicatorSub, stat
 
 func (f Funder) ExpectAndHandleDepositedEvent(id types.ID, sub *AdjudicatorSub, idx uint16, file *os.File) error {
 	event := sub.Next()
-	file.WriteString(fmt.Sprintf("Got event: %T, %v\n", event, event))
+	file.WriteString(fmt.Sprintf("On id: %s,expected deposit event, got event: %T, %v\n", f.pab.GetContractInstanceID(), event, event))
 	if event.ID() != id {
 		return MismatchingChannelIDError
 	}
