@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"os"
 	"perun.network/go-perun/channel"
 	"perun.network/perun-cardano-backend/channel/types"
 	"time"
@@ -26,6 +27,7 @@ func NewFunder(pab *PAB) *Funder {
 }
 
 func (f Funder) Fund(_ context.Context, req channel.FundingReq) error {
+	file, _ := os.OpenFile(fmt.Sprintf("%d.log", req.Idx), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	// TODO implement funding abort (reclamation of funds on peer misbehaviour)
 	sub, err := f.pab.NewInternalSubscription(req.Params.ID())
 	if err != nil {
@@ -47,12 +49,12 @@ func (f Funder) Fund(_ context.Context, req channel.FundingReq) error {
 
 	for i := uint16(0); i < uint16(req.Idx); i++ {
 		if i == 0 {
-			err = f.ExpectAndHandleStartEvent(req.Params.ID(), sub, state)
+			err = f.ExpectAndHandleStartEvent(req.Params.ID(), sub, state, file)
 			if err != nil {
 				return err
 			}
 		} else {
-			err = f.ExpectAndHandleDepositedEvent(req.Params.ID(), sub, i)
+			err = f.ExpectAndHandleDepositedEvent(req.Params.ID(), sub, i, file)
 			if err != nil {
 				return err
 			}
@@ -65,7 +67,7 @@ func (f Funder) Fund(_ context.Context, req channel.FundingReq) error {
 		if err != nil {
 			return err
 		}
-		err = f.ExpectAndHandleStartEvent(req.Params.ID(), sub, state)
+		err = f.ExpectAndHandleStartEvent(req.Params.ID(), sub, state, file)
 		if err != nil {
 			return err
 		}
@@ -75,7 +77,7 @@ func (f Funder) Fund(_ context.Context, req channel.FundingReq) error {
 		if err != nil {
 			return err
 		}
-		err = f.ExpectAndHandleDepositedEvent(req.Params.ID(), sub, uint16(req.Idx))
+		err = f.ExpectAndHandleDepositedEvent(req.Params.ID(), sub, uint16(req.Idx), file)
 		if err != nil {
 			return err
 		}
@@ -83,7 +85,7 @@ func (f Funder) Fund(_ context.Context, req channel.FundingReq) error {
 
 	for i := int(req.Idx) + 1; i < len(params.Parties); i++ {
 		// Narrowing is safe, because we already checked that the number of parties is smaller than math.MaxUint16
-		err = f.ExpectAndHandleDepositedEvent(req.Params.ID(), sub, uint16(i))
+		err = f.ExpectAndHandleDepositedEvent(req.Params.ID(), sub, uint16(i), file)
 		if err != nil {
 			return err
 		}
@@ -91,8 +93,9 @@ func (f Funder) Fund(_ context.Context, req channel.FundingReq) error {
 	return nil
 }
 
-func (f Funder) ExpectAndHandleStartEvent(id types.ID, sub *AdjudicatorSub, state types.ChannelState) error {
+func (f Funder) ExpectAndHandleStartEvent(id types.ID, sub *AdjudicatorSub, state types.ChannelState, file *os.File) error {
 	event := sub.Next()
+	file.WriteString(fmt.Sprintf("Got event: %T, %v\n", event, event))
 	if event.ID() != id {
 		return MismatchingChannelIDError
 	}
@@ -108,8 +111,9 @@ func (f Funder) ExpectAndHandleStartEvent(id types.ID, sub *AdjudicatorSub, stat
 	return verifyStartEvent(start.NewDatum, state)
 }
 
-func (f Funder) ExpectAndHandleDepositedEvent(id types.ID, sub *AdjudicatorSub, idx uint16) error {
+func (f Funder) ExpectAndHandleDepositedEvent(id types.ID, sub *AdjudicatorSub, idx uint16, file *os.File) error {
 	event := sub.Next()
+	file.WriteString(fmt.Sprintf("Got event: %T, %v\n", event, event))
 	if event.ID() != id {
 		return MismatchingChannelIDError
 	}
