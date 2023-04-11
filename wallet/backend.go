@@ -15,6 +15,7 @@
 package wallet
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"perun.network/go-perun/channel"
@@ -103,6 +104,14 @@ func (b RemoteBackend) CalculateChannelID(parameters types.ChannelParameters) (c
 		return response, fmt.Errorf("wallet server was unable to compute ChannelID: %w", err)
 	}
 	return response, nil
+}
+
+func (b RemoteBackend) ToChannelStateSigningAccount(account wallet.Account) (types.ChannelStateSigningAccount, error) {
+	acc, ok := account.(RemoteAccount)
+	if !ok {
+		return acc, errors.New("account is not a RemoteAccount")
+	}
+	return acc, nil
 }
 
 var _ wallet.Backend = RemoteBackend{}
