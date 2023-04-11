@@ -148,16 +148,16 @@ func (a AdjudicatorSub) Close() error {
 	return a.connection.Close()
 }
 
-func decodeEvent(event wire.Event, id types.ID) (types.InternalEvent, error) {
+func decodeEvent(event wire.Event, id types.ID) (InternalEvent, error) {
 	switch event.Tag {
-	case types.CreatedTag:
-		return types.Created{}.FromEvent(id, event)
-	case types.DepositedTag:
-		return types.Deposited{}.FromEvent(id, event)
-	case types.DisputedTag:
-		return types.Disputed{}.FromEvent(id, event)
-	case types.ConcludedTag:
-		return types.Concluded{}.FromEvent(id, event)
+	case CreatedTag:
+		return Created{}.FromEvent(id, event)
+	case DepositedTag:
+		return Deposited{}.FromEvent(id, event)
+	case DisputedTag:
+		return Disputed{}.FromEvent(id, event)
+	case ConcludedTag:
+		return Concluded{}.FromEvent(id, event)
 	default:
 		return nil, fmt.Errorf("invalid event tag: %s", event.Tag)
 	}

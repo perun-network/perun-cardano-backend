@@ -96,7 +96,7 @@ func (f Funder) ExpectAndHandleStartEvent(id types.ID, sub *AdjudicatorSub, stat
 	if event.ID() != id {
 		return MismatchingChannelIDError
 	}
-	start, ok := event.(types.Created)
+	start, ok := event.(Created)
 	if !ok {
 		return fmt.Errorf("expected Created event, got type %T, value: %v", event, event)
 	}
@@ -113,7 +113,7 @@ func (f Funder) ExpectAndHandleDepositedEvent(id types.ID, sub *AdjudicatorSub, 
 	if event.ID() != id {
 		return MismatchingChannelIDError
 	}
-	deposited, ok := event.(types.Deposited)
+	deposited, ok := event.(Deposited)
 	if !ok {
 		return fmt.Errorf("expected Deposited event, got type %T, value: %v", event, event)
 	}

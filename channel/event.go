@@ -12,11 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package types
+package channel
 
 import (
 	"perun.network/go-perun/channel"
 	"perun.network/go-perun/wallet"
+	"perun.network/perun-cardano-backend/channel/types"
 	"perun.network/perun-cardano-backend/wire"
 )
 
@@ -38,23 +39,23 @@ type InternalEvent interface {
 
 type (
 	Created struct {
-		ChannelID ID
-		NewDatum  ChannelDatum
+		ChannelID types.ID
+		NewDatum  types.ChannelDatum
 	}
 	Deposited struct {
-		ChannelID ID
-		OldDatum  ChannelDatum
-		NewDatum  ChannelDatum
+		ChannelID types.ID
+		OldDatum  types.ChannelDatum
+		NewDatum  types.ChannelDatum
 	}
 	Disputed struct {
-		ChannelID  ID
-		OldDatum   ChannelDatum
-		NewDatum   ChannelDatum
+		ChannelID  types.ID
+		OldDatum   types.ChannelDatum
+		NewDatum   types.ChannelDatum
 		Signatures []wallet.Sig
 	}
 	Concluded struct {
-		ChannelID ID
-		OldDatum  ChannelDatum
+		ChannelID types.ID
+		OldDatum  types.ChannelDatum
 	}
 )
 
@@ -74,9 +75,9 @@ func (c Concluded) ToPerunEvent() channel.AdjudicatorEvent {
 	return channel.NewConcludedEvent(c.ID(), c.Timeout(), c.Version())
 }
 
-func (c Concluded) FromEvent(id ID, ev wire.Event) (Concluded, error) {
+func (c Concluded) FromEvent(id types.ID, ev wire.Event) (Concluded, error) {
 	if len(ev.DatumList) != 1 {
-		return c, NewDecodeEventError(ConcludedTag, 1, len(ev.DatumList))
+		return c, types.NewDecodeEventError(ConcludedTag, 1, len(ev.DatumList))
 	}
 	oldDatum, err := ev.DatumList[0].Decode()
 	if err != nil {
@@ -110,9 +111,9 @@ func (d Disputed) ToPerunEvent() channel.AdjudicatorEvent {
 	)
 }
 
-func (d Disputed) FromEvent(id ID, ev wire.Event) (Disputed, error) {
+func (d Disputed) FromEvent(id types.ID, ev wire.Event) (Disputed, error) {
 	if len(ev.DatumList) != 2 {
-		return d, DecodeEventError{DisputedTag, 2, len(ev.DatumList)}
+		return d, types.DecodeEventError{DisputedTag, 2, len(ev.DatumList)}
 	}
 	oldDatum, err := ev.DatumList[0].Decode()
 	if err != nil {
@@ -145,9 +146,9 @@ func (d Deposited) ToPerunEvent() channel.AdjudicatorEvent {
 	return nil
 }
 
-func (d Deposited) FromEvent(id ID, ev wire.Event) (Deposited, error) {
+func (d Deposited) FromEvent(id types.ID, ev wire.Event) (Deposited, error) {
 	if len(ev.DatumList) != 2 {
-		return d, NewDecodeEventError(DepositedTag, 2, len(ev.DatumList))
+		return d, types.NewDecodeEventError(DepositedTag, 2, len(ev.DatumList))
 	}
 	oldDatum, err := ev.DatumList[0].Decode()
 	if err != nil {
@@ -180,9 +181,9 @@ func (c Created) ToPerunEvent() channel.AdjudicatorEvent {
 	return nil
 }
 
-func (c Created) FromEvent(id ID, ev wire.Event) (Created, error) {
+func (c Created) FromEvent(id types.ID, ev wire.Event) (Created, error) {
 	if len(ev.DatumList) != 1 {
-		return c, NewDecodeEventError(CreatedTag, 1, len(ev.DatumList))
+		return c, types.NewDecodeEventError(CreatedTag, 1, len(ev.DatumList))
 	}
 	datum, err := ev.DatumList[0].Decode()
 	if err != nil {
