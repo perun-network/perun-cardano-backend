@@ -63,6 +63,14 @@ func receiveEvents(a *AdjudicatorSub) {
 		close(a.lastError)
 		_ = a.connection.Close()
 	}
+	sendEvent := func(e gpchannel.AdjudicatorEvent) {
+		select {
+		case a.eventQueue <- e:
+		case <-a.close:
+			closeGracefully(errors.New("subscription closed by user"))
+			return
+		}
+	}
 
 	var message wire.SubscriptionMessage
 	for {
@@ -87,23 +95,13 @@ func receiveEvents(a *AdjudicatorSub) {
 				return
 			}
 			if !a.IsPerunSub {
-				select {
-				case a.eventQueue <- adjEvent:
-				case <-a.close:
-					closeGracefully(errors.New("subscription closed by user"))
-					return
+				sendEvent(adjEvent)
+			} else {
+				perunEvent := adjEvent.ToPerunEvent()
+				if perunEvent == nil {
+					continue
 				}
-				a.eventQueue <- adjEvent
-			}
-			perunEvent := adjEvent.ToPerunEvent()
-			if perunEvent == nil {
-				continue
-			}
-			select {
-			case a.eventQueue <- perunEvent:
-			case <-a.close:
-				closeGracefully(errors.New("subscription closed by user"))
-				return
+				sendEvent(perunEvent)
 			}
 		}
 	}
