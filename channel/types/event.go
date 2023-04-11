@@ -17,6 +17,7 @@ package types
 import (
 	"perun.network/go-perun/channel"
 	"perun.network/go-perun/wallet"
+	"perun.network/perun-cardano-backend/wire"
 )
 
 const (
@@ -73,6 +74,20 @@ func (c Concluded) ToPerunEvent() channel.AdjudicatorEvent {
 	return channel.NewConcludedEvent(c.ID(), c.Timeout(), c.Version())
 }
 
+func (c Concluded) FromEvent(id ID, ev wire.Event) (Concluded, error) {
+	if len(ev.DatumList) != 1 {
+		return c, NewDecodeEventError(ConcludedTag, 1, len(ev.DatumList))
+	}
+	oldDatum, err := ev.DatumList[0].Decode()
+	if err != nil {
+		return c, err
+	}
+	return Concluded{
+		ChannelID: id,
+		OldDatum:  oldDatum,
+	}, nil
+}
+
 func (d Disputed) ID() channel.ID {
 	return d.ChannelID
 }
@@ -95,6 +110,25 @@ func (d Disputed) ToPerunEvent() channel.AdjudicatorEvent {
 	)
 }
 
+func (d Disputed) FromEvent(id ID, ev wire.Event) (Disputed, error) {
+	if len(ev.DatumList) != 2 {
+		return d, DecodeEventError{DisputedTag, 2, len(ev.DatumList)}
+	}
+	oldDatum, err := ev.DatumList[0].Decode()
+	if err != nil {
+		return d, err
+	}
+	newDatum, err := ev.DatumList[1].Decode()
+	if err != nil {
+		return d, err
+	}
+	return Disputed{
+		ChannelID: id,
+		OldDatum:  oldDatum,
+		NewDatum:  newDatum,
+	}, nil
+}
+
 func (d Deposited) ID() channel.ID {
 	return d.ChannelID
 }
@@ -111,18 +145,51 @@ func (d Deposited) ToPerunEvent() channel.AdjudicatorEvent {
 	return nil
 }
 
-func (s Created) ID() channel.ID {
-	return s.ChannelID
+func (d Deposited) FromEvent(id ID, ev wire.Event) (Deposited, error) {
+	if len(ev.DatumList) != 2 {
+		return d, NewDecodeEventError(DepositedTag, 2, len(ev.DatumList))
+	}
+	oldDatum, err := ev.DatumList[0].Decode()
+	if err != nil {
+		return d, err
+	}
+	newDatum, err := ev.DatumList[1].Decode()
+	if err != nil {
+		return d, err
+	}
+	return Deposited{
+		ChannelID: id,
+		OldDatum:  oldDatum,
+		NewDatum:  newDatum,
+	}, nil
 }
 
-func (s Created) Timeout() channel.Timeout {
+func (c Created) ID() channel.ID {
+	return c.ChannelID
+}
+
+func (c Created) Timeout() channel.Timeout {
 	return nil
 }
 
-func (s Created) Version() uint64 {
+func (c Created) Version() uint64 {
 	return 0
 }
 
-func (s Created) ToPerunEvent() channel.AdjudicatorEvent {
+func (c Created) ToPerunEvent() channel.AdjudicatorEvent {
 	return nil
+}
+
+func (c Created) FromEvent(id ID, ev wire.Event) (Created, error) {
+	if len(ev.DatumList) != 1 {
+		return c, NewDecodeEventError(CreatedTag, 1, len(ev.DatumList))
+	}
+	datum, err := ev.DatumList[0].Decode()
+	if err != nil {
+		return c, err
+	}
+	return Created{
+		ChannelID: id,
+		NewDatum:  datum,
+	}, nil
 }

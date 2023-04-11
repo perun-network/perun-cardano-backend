@@ -149,66 +149,15 @@ func (a AdjudicatorSub) Close() error {
 }
 
 func decodeEvent(event wire.Event, id types.ID) (types.InternalEvent, error) {
-	const errorFormat = "invalid amount of ChannelDatums received in %s event. Expected: %d, Actual: %d"
 	switch event.Tag {
 	case types.CreatedTag:
-		if len(event.DatumList) != 1 {
-			return nil, fmt.Errorf(errorFormat, types.CreatedTag, 1, len(event.DatumList))
-		}
-		datum, err := event.DatumList[0].Decode()
-		if err != nil {
-			return nil, err
-		}
-		return types.Created{
-			ChannelID: id,
-			NewDatum:  datum,
-		}, nil
+		return types.Created{}.FromEvent(id, event)
 	case types.DepositedTag:
-		if len(event.DatumList) != 2 {
-			return nil, fmt.Errorf(errorFormat, types.DepositedTag, 2, len(event.DatumList))
-		}
-		oldDatum, err := event.DatumList[0].Decode()
-		if err != nil {
-			return nil, err
-		}
-		newDatum, err := event.DatumList[1].Decode()
-		if err != nil {
-			return nil, err
-		}
-		return types.Deposited{
-			ChannelID: id,
-			OldDatum:  oldDatum,
-			NewDatum:  newDatum,
-		}, nil
+		return types.Deposited{}.FromEvent(id, event)
 	case types.DisputedTag:
-		if len(event.DatumList) != 2 {
-			return nil, fmt.Errorf(errorFormat, types.DisputedTag, 2, len(event.DatumList))
-		}
-		oldDatum, err := event.DatumList[0].Decode()
-		if err != nil {
-			return nil, err
-		}
-		newDatum, err := event.DatumList[1].Decode()
-		if err != nil {
-			return nil, err
-		}
-		return types.Disputed{
-			ChannelID: id,
-			OldDatum:  oldDatum,
-			NewDatum:  newDatum,
-		}, nil
+		return types.Disputed{}.FromEvent(id, event)
 	case types.ConcludedTag:
-		if len(event.DatumList) != 1 {
-			return nil, fmt.Errorf(errorFormat, types.ConcludedTag, 1, len(event.DatumList))
-		}
-		datum, err := event.DatumList[0].Decode()
-		if err != nil {
-			return nil, err
-		}
-		return types.Concluded{
-			ChannelID: id,
-			OldDatum:  datum,
-		}, nil
+		return types.Concluded{}.FromEvent(id, event)
 	default:
 		return nil, fmt.Errorf("invalid event tag: %s", event.Tag)
 	}
