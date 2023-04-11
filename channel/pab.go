@@ -249,3 +249,7 @@ func (p *PAB) ForceClose() {
 	//TODO
 	panic("implement me")
 }
+
+func (p *PAB) GetContractInstanceID() string {
+	return p.contractInstanceID
+}
