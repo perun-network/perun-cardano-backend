@@ -24,12 +24,16 @@ import (
 // RemoteWallet is a cardano signing wallet using a remote wallet server.
 // Note: If we decide to stick with a remote signing wallet, we will have to harden the wallet server!
 type RemoteWallet struct {
-	walletServer Remote
+	walletServer    Remote
+	cardanoWalletID string
 }
 
 // NewRemoteWallet returns a pointer to a new RemoteWallet struct associated with the given Remote wallet server.
-func NewRemoteWallet(remote Remote) *RemoteWallet {
-	return &RemoteWallet{walletServer: remote}
+func NewRemoteWallet(remote Remote, id string) *RemoteWallet {
+	return &RemoteWallet{
+		walletServer:    remote,
+		cardanoWalletID: id,
+	}
 }
 
 // LockAll is unimplemented due to the remote nature of this wallet.
@@ -59,5 +63,5 @@ func (w *RemoteWallet) Unlock(addr wallet.Address) (wallet.Account, error) {
 	if !response {
 		return nil, fmt.Errorf("wallet server has no private key for address %s", rwAddress)
 	}
-	return MakeRemoteAccount(*rwAddress, w.walletServer), nil
+	return MakeRemoteAccount(*rwAddress, w.walletServer, w.cardanoWalletID), nil
 }

@@ -15,8 +15,10 @@
 package wallet
 
 import (
+	"errors"
 	"fmt"
 	"io"
+	"perun.network/go-perun/channel"
 	"perun.network/go-perun/wallet"
 	"perun.network/perun-cardano-backend/channel/types"
 	"perun.network/perun-cardano-backend/wallet/address"
@@ -91,6 +93,25 @@ func (b RemoteBackend) VerifyChannelStateSignature(state types.ChannelState, sig
 		return false, fmt.Errorf("wallet server could not verify message: %w", err)
 	}
 	return response, nil
+}
+
+// CalculateChannelID returns the channelId for the given parameters as calculated by the remote instance.
+func (b RemoteBackend) CalculateChannelID(parameters types.ChannelParameters) (channel.ID, error) {
+	request := wire.MakeChannelParameters(parameters)
+	var response wire.ChannelID
+	err := b.walletServer.CallEndpoint(EndpointCalculateChannelID, request, &response)
+	if err != nil {
+		return response, fmt.Errorf("wallet server was unable to compute ChannelID: %w", err)
+	}
+	return response, nil
+}
+
+func (b RemoteBackend) ToChannelStateSigningAccount(account wallet.Account) (types.ChannelStateSigningAccount, error) {
+	acc, ok := account.(RemoteAccount)
+	if !ok {
+		return acc, errors.New("account is not a RemoteAccount")
+	}
+	return acc, nil
 }
 
 var _ wallet.Backend = RemoteBackend{}

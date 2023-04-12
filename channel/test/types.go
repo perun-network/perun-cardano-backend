@@ -12,20 +12,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package wire_test
+package test
 
 import (
-	"github.com/stretchr/testify/require"
-	"perun.network/perun-cardano-backend/wallet/test"
-	"perun.network/perun-cardano-backend/wire"
-	pkgtest "polycry.pt/poly-go/test"
-	"testing"
+	"math/rand"
+	"perun.network/go-perun/channel"
+	"perun.network/perun-cardano-backend/channel/types"
 )
 
-func TestPubKey(t *testing.T) {
-	rng := pkgtest.Prng(t)
-	expected := test.MakeRandomAddress(rng)
-	actual, err := wire.MakePubKey(expected).Decode()
-	require.NoError(t, err, "unexpected error when decoding public key")
-	require.Equal(t, expected.GetPubKey(), actual.GetPubKey(), "PubKey.Decode returned a wrong address")
+func MakeRandomChannelState(rng *rand.Rand) types.ChannelState {
+	channelID := MakeRandomChannelID(rng)
+	balances := []uint64{rng.Uint64(), rng.Uint64()}
+	version := rng.Uint64()
+	final := rng.Intn(2) == 1
+	return types.ChannelState{
+		ID:       channelID,
+		Balances: balances,
+		Version:  version,
+		Final:    final,
+	}
+}
+
+func MakeRandomChannelID(rng *rand.Rand) types.ID {
+	id := channel.ID{}
+	rng.Read(id[:])
+	return id
 }

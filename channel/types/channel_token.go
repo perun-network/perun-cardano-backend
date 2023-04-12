@@ -1,4 +1,4 @@
-// Copyright 2022, 2023 - See NOTICE file for copyright holders.
+// Copyright 2023 - See NOTICE file for copyright holders.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,24 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package test
+package types
 
-import (
-	"math/rand"
-	gpchannel "perun.network/go-perun/channel"
-	"perun.network/perun-cardano-backend/channel/types"
-)
+// ChannelToken is the backends representation of our channel's on-chain ThreadToken NFT.
+// It is used to establish channel uniqueness and to identify the channel on-chain.
+type ChannelToken struct {
+	TokenSymbol string
+	TokenName   string
+	TxOutRef    TxOutRef
+}
 
-func MakeRandomChannelState(rng *rand.Rand) types.ChannelState {
-	var channelID = gpchannel.ID{}
-	rng.Read(channelID[:])
-	balances := []uint64{rng.Uint64(), rng.Uint64()}
-	version := rng.Uint64()
-	final := rng.Intn(2) == 1
-	return types.ChannelState{
-		ID:       channelID,
-		Balances: balances,
-		Version:  version,
-		Final:    final,
-	}
+type TxOutRef struct {
+	TxID  string
+	Index int
 }

@@ -24,16 +24,22 @@ import (
 
 // RemoteAccount represents a cardano account. The secrets are stored on the associated remote walletServer.
 type RemoteAccount struct {
-	AccountAddress address.Address
-	walletServer   Remote
+	AccountAddress  address.Address
+	walletServer    Remote
+	cardanoWalletID string
 }
 
 // MakeRemoteAccount returns a new RemoteAccount instance.
-func MakeRemoteAccount(addr address.Address, r Remote) RemoteAccount {
+func MakeRemoteAccount(addr address.Address, r Remote, id string) RemoteAccount {
 	return RemoteAccount{
-		AccountAddress: addr,
-		walletServer:   r,
+		AccountAddress:  addr,
+		walletServer:    r,
+		cardanoWalletID: id,
 	}
+}
+
+func (a RemoteAccount) GetCardanoWalletID() string {
+	return a.cardanoWalletID
 }
 
 // Address returns the Address associated with this account.

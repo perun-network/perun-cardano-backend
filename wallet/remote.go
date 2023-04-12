@@ -22,11 +22,14 @@ import (
 	"net/http"
 )
 
-const EndpointSignData = "/sign"
-const EndpointSignChannelState = "/signChannelState"
-const EndpointVerifyDataSignature = "/verify"
-const EndpointVerifyChannelStateSignature = "/verifyChannelState"
-const EndpointKeyAvailable = "/keyAvailable"
+const (
+	EndpointSignData                    = "/sign"
+	EndpointSignChannelState            = "/signChannelState"
+	EndpointVerifyDataSignature         = "/verify"
+	EndpointVerifyChannelStateSignature = "/verifyChannelState"
+	EndpointKeyAvailable                = "/keyAvailable"
+	EndpointCalculateChannelID          = "/calculateChannelID"
+)
 
 // Remote is an interface, which instances are used to communicate with the perun-cardano-wallet server.
 type Remote interface {

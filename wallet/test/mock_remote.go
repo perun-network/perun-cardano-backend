@@ -30,8 +30,9 @@ import (
 // The default implementation has one valid signature tuple:
 // (MockMessage, MockSignature, MockAddress).
 type MockRemote struct {
-	MockAddress     address.Address
-	MockPubKeyBytes [address.PubKeyLength]byte
+	MockAddress         address.Address
+	MockPubKeyBytes     [address.PubKeyLength]byte
+	MockPubKeyHashBytes [address.PubKeyHashLength]byte
 	// UnavailableAddress is a valid wallet.PubKey that has associated account (private key) in this remote wallet.
 	UnavailableAddress address.Address
 	// InvalidPubKeyBytes is invalid because it is not exactly wallet.PubKeyLength bytes long.
@@ -69,15 +70,17 @@ func initializeRandomValues(r *MockRemote, rng *rand.Rand) {
 
 	r.MockAddress = MakeRandomAddress(rng)
 	r.MockPubKeyBytes = r.MockAddress.GetPubKey()
+	r.MockPubKeyHashBytes = r.MockAddress.GetPubKeyHash()
+	r.MockAddress.SetPaymentPubKeyHash(r.MockPubKeyHashBytes)
 	r.UnavailableAddress = MakeRandomAddress(rng)
 	for bytes.Equal(r.UnavailableAddress.GetPubKeySlice(), r.MockPubKeyBytes[:]) {
 		r.UnavailableAddress = MakeRandomAddress(rng)
 	}
 
 	if rng.Int()%2 == 0 {
-		r.InvalidPubKeyBytes = MakeTooFewPublicKeyBytes(rng)
+		r.InvalidPubKeyBytes = MakeTooFewAddressBytes(rng)
 	} else {
-		r.InvalidPubKeyBytes = MakeTooManyPublicKeyBytes(rng)
+		r.InvalidPubKeyBytes = MakeTooManyAddressBytes(rng)
 	}
 	rng.Read(r.InvalidPubKeyBytes)
 
@@ -173,8 +176,8 @@ func callSign(r *MockRemote, request wire.SigningRequest, response *wire.Signing
 	if err != nil {
 		return fmt.Errorf("unable to decode PubKey from request")
 	}
-	if !reqAddr.Equal(&r.MockAddress) {
-		return fmt.Errorf("invalid public key for mock remote")
+	if reqAddr.GetPubKey() != r.MockPubKeyBytes {
+		return fmt.Errorf("invalid public key for mock remote, reqaddr: %x, mockpubkeybytes: %x", reqAddr.GetPubKey(), r.MockPubKeyBytes)
 	}
 
 	if request.Message != r.MockMessageString {
@@ -189,10 +192,10 @@ func callVerify(r *MockRemote, request wire.VerificationRequest, response *wire.
 	if err != nil {
 		return fmt.Errorf("unable to decode PubKey from request")
 	}
-	if !reqAddr.Equal(&r.MockAddress) && !reqAddr.Equal(&r.UnavailableAddress) {
+	if reqAddr.GetPubKey() != r.MockPubKeyBytes && reqAddr.GetPubKey() != r.UnavailableAddress.GetPubKey() {
 		return fmt.Errorf("invalid public key for mock remote")
 	}
-	if reqAddr.Equal(&r.UnavailableAddress) {
+	if reqAddr.GetPubKey() == r.UnavailableAddress.GetPubKey() {
 		*response = false
 		return nil
 	}
@@ -219,7 +222,7 @@ func callSignChannelState(r *MockRemote, request wire.ChannelStateSigningRequest
 	if err != nil {
 		return fmt.Errorf("unable to decode PubKey from request")
 	}
-	if !reqAddr.Equal(&r.MockAddress) {
+	if reqAddr.GetPubKey() != r.MockAddress.GetPubKey() {
 		return fmt.Errorf("invalid public key for mock remote")
 	}
 	if !request.ChannelState.Decode().Equal(r.MockChannelState) {
@@ -234,10 +237,10 @@ func callVerifyChannelState(r *MockRemote, request wire.ChannelStateVerification
 	if err != nil {
 		return fmt.Errorf("unable to decode PubKey from request")
 	}
-	if !reqAddr.Equal(&r.MockAddress) && !reqAddr.Equal(&r.UnavailableAddress) {
+	if reqAddr.GetPubKey() != r.MockAddress.GetPubKey() && reqAddr.GetPubKey() != r.UnavailableAddress.GetPubKey() {
 		return fmt.Errorf("invalid public key for mock remote")
 	}
-	if reqAddr.Equal(&r.UnavailableAddress) {
+	if reqAddr.GetPubKey() == r.UnavailableAddress.GetPubKey() {
 		*response = false
 		return nil
 	}
@@ -264,6 +267,6 @@ func callKeyAvailable(r *MockRemote, request wire.KeyAvailabilityRequest, respon
 	if err != nil {
 		return fmt.Errorf("unable to decode address from request: %w", err)
 	}
-	*response = reqAddr.Equal(&r.MockAddress)
+	*response = reqAddr.GetPubKey() == r.MockPubKeyBytes
 	return nil
 }

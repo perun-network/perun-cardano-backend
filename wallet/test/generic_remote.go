@@ -20,12 +20,38 @@ import (
 	"fmt"
 	"math/rand"
 	gpwallet "perun.network/go-perun/wallet"
+	"perun.network/perun-cardano-backend/channel/test"
 	"perun.network/perun-cardano-backend/channel/types"
 	"perun.network/perun-cardano-backend/wallet"
 	"perun.network/perun-cardano-backend/wallet/address"
 	"perun.network/perun-cardano-backend/wire"
 	"polycry.pt/poly-go/sync"
 )
+
+type channelIDOracle struct {
+	lock       sync.Mutex
+	parameters []types.ChannelParameters
+	ids        []types.ID
+}
+
+var ChannelIDOracle = &channelIDOracle{
+	parameters: []types.ChannelParameters{},
+	ids:        []types.ID{},
+}
+
+func (o *channelIDOracle) GetChannelID(params types.ChannelParameters, rng *rand.Rand) types.ID {
+	o.lock.Lock()
+	defer o.lock.Unlock()
+	for i, p := range o.parameters {
+		if p.Equal(params) {
+			return o.ids[i]
+		}
+	}
+	o.parameters = append([]types.ChannelParameters{params}, o.parameters...)
+	id := test.MakeRandomChannelID(rng)
+	o.ids = append([]types.ID{id}, o.ids...)
+	return id
+}
 
 type validSignatures struct {
 	DataLock                    sync.Mutex
@@ -109,9 +135,11 @@ func (d ChannelStateSignature) Equal(other ChannelStateSignature) bool {
 // Signatures are generated randomly and all valid signature t-tuples are collected globally
 // in ValidSignatures. This means that GenericRemote verifies a signature as valid, iff it has been signed by ANY
 // Generic remote before.
+// GenericRemote uses the ChannelIDOracle to come up with a random channel id that is then fixed to that
+// ChannelParameters.
 type GenericRemote struct {
-	AvailableAddress address.Address
-	rng              *rand.Rand
+	AvailableAddresses []address.Address
+	rng                *rand.Rand
 	// The lock is needed because the same GenericRemote instance might be required to generate random signatures
 	// using the same rand.Rand instance in parallel and rand.Rand is not concurrently safe.
 	mutex sync.Mutex
@@ -121,10 +149,10 @@ type GenericRemote struct {
 
 // NewGenericRemote returns a new generic remote instance. Every GenericRemote instance needs to receive an exclusive
 // rand.Rand instance for concurrent safety!
-func NewGenericRemote(availableAddress address.Address, rng *rand.Rand) *GenericRemote {
+func NewGenericRemote(availableAddresses []address.Address, rng *rand.Rand) *GenericRemote {
 	g := GenericRemote{
-		AvailableAddress: availableAddress,
-		rng:              rng,
+		AvailableAddresses: availableAddresses,
+		rng:                rng,
 	}
 	g.callEndpoint = makeGenericCallEndpointDefault(&g)
 	return &g
@@ -191,10 +219,29 @@ func makeGenericCallEndpointDefault(g *GenericRemote) func(string, interface{}, 
 				return fmt.Errorf("unable to cast response to VerificationResponse")
 			}
 			return g.endpointVerifyChannelStateSignature(request, response)
+		case wallet.EndpointCalculateChannelID:
+			request, ok := req.(wire.ChannelParameters)
+			if !ok {
+				return fmt.Errorf("unable to cast request to ChannelParameters")
+			}
+			response, ok := resp.(*wire.ChannelID)
+			if !ok {
+				return fmt.Errorf("unable to cast response to ChannelID")
+			}
+			return g.endpointCalculateChannelID(request, response)
 		default:
 			return fmt.Errorf("invalid endpoint: %s", endpoint)
 		}
 	}
+}
+
+func (g *GenericRemote) isAvailable(address address.Address) bool {
+	for _, a := range g.AvailableAddresses {
+		if a.GetPubKey() == address.GetPubKey() {
+			return true
+		}
+	}
+	return false
 }
 
 func (g *GenericRemote) endpointSignData(request wire.SigningRequest, response *wire.SigningResponse) error {
@@ -202,7 +249,7 @@ func (g *GenericRemote) endpointSignData(request wire.SigningRequest, response *
 	if err != nil {
 		return fmt.Errorf("unable to decode PubKey from request")
 	}
-	if !reqAddr.Equal(&g.AvailableAddress) {
+	if !g.isAvailable(reqAddr) {
 		return fmt.Errorf("account is not available in wallet")
 	}
 	msg, err := hex.DecodeString(request.Message)
@@ -244,7 +291,7 @@ func (g *GenericRemote) endpointKeyAvailable(request wire.KeyAvailabilityRequest
 	if err != nil {
 		return fmt.Errorf("unable to decode PubKey from request")
 	}
-	*response = reqAddr.Equal(&g.AvailableAddress)
+	*response = g.isAvailable(reqAddr)
 	return nil
 }
 
@@ -253,7 +300,7 @@ func (g *GenericRemote) endpointSignChannelState(request wire.ChannelStateSignin
 	if err != nil {
 		return fmt.Errorf("unable to decode PubKey from request")
 	}
-	if !reqAddr.Equal(&g.AvailableAddress) {
+	if !g.isAvailable(reqAddr) {
 		return fmt.Errorf("account is not available in wallet")
 	}
 	state := request.ChannelState.Decode()
@@ -280,5 +327,17 @@ func (g *GenericRemote) endpointVerifyChannelStateSignature(request wire.Channel
 		Signature:    sig,
 		ChannelState: state,
 	})
+	return nil
+}
+
+func (g *GenericRemote) endpointCalculateChannelID(request wire.ChannelParameters, response *wire.ChannelID) error {
+	params, err := request.Decode()
+	if err != nil {
+		return fmt.Errorf("unable to decode the parameters")
+	}
+	g.mutex.Lock()
+	id := ChannelIDOracle.GetChannelID(params, g.rng)
+	g.mutex.Unlock()
+	*response = id
 	return nil
 }
